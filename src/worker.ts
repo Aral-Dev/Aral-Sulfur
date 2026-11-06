@@ -4,19 +4,34 @@ import { handleLogin } from '@handlers/login';
 import { handlePanel } from '@handlers/panel';
 import { handleProxyIPs } from '@handlers/proxy-ip';
 import { generateQRCode } from '@handlers/qrcode';
+import { handleSetup } from '@handlers/setup';
 import { handleSubscriptions } from '@handlers/subscription';
 import { handleTelegram } from '@handlers/telegram';
 import { fallback } from '@handlers/utils';
 import { handleWebsocket } from '@handlers/websocket';
-import { init, getGlobals } from '@settings';
+import { init, getGlobals, loadMainSettings, isKVBound } from '@settings';
 
 export default {
 	async fetch(request: Request, env: Env) {
 		try {
 			init(request, env);
+
 			if (request.headers.get('Upgrade') === 'websocket') return handleWebsocket(request);
+
+			// Setup flow runs before anything else: it works without a securePath
+			// and is the only thing reachable until the panel is activated.
+			if (!await ensureInitialized()) {
+				return await safeRoute(handleSetup(request, env));
+			}
+
 			const { securePath, pathname } = getGlobals();
 			const path = pathname.split('/').splice(0, 3).join('/');
+
+			// /setup stays reachable after activation → sends to login
+			if (pathname === '/setup' || pathname === '/setup/apply') {
+				const url = new URL(`/${securePath}/login`, request.url);
+				return Response.redirect(url, 302);
+			}
 
 			switch (path) {
 				case `/${securePath}/panel`:
@@ -48,6 +63,23 @@ export default {
 			// renderError itself is fault-tolerant and always resolves to a Response.
 			return await safeErrorPage(error);
 		}
+	}
+};
+
+/**
+ * Loads the main settings from KV on the first request of an isolate.
+ * Returns false while the panel has not been activated yet — in that case
+ * every route falls through to the setup wizard.
+ */
+async function ensureInitialized(): Promise<boolean> {
+	try {
+		if (!isKVBound()) return false;
+
+		const settings = await loadMainSettings();
+		return settings !== null;
+	} catch (error) {
+		console.log('Init load error (falling back to setup route):', error);
+		return false;
 	}
 }
 

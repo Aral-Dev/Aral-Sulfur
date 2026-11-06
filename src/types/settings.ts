@@ -98,12 +98,7 @@ export interface EmbededSettings {
     deployType?: string;
 }
 
-export interface MainSettings extends Omit<EmbededSettings,
-    | 'accID'
-    | 'apiToken'
-    | 'accEmail'
-    | 'mainDomain'
-> { }
+export interface MainSettings extends Omit<EmbededSettings, 'mainDomain'> { }
 
 export interface SharedSettings extends
     Pick<EmbededSettings,

@@ -13,6 +13,7 @@ const __dirname = pathDirname(__filename);
 
 const ASSET_PATH = join(__dirname, '../src/assets');
 const DIST_PATH = join(__dirname, '../dist/');
+const ROOT_PATH = join(__dirname, '..');
 
 const green = '\x1b[32m';
 const red = '\x1b[31m';
@@ -67,8 +68,7 @@ async function buildWorker() {
         format: 'esm',
         write: false,
         external: [
-            'cloudflare:sockets',
-            'node:crypto'
+            'cloudflare:sockets'
         ],
         platform: 'browser',
         target: 'esnext',
@@ -91,7 +91,7 @@ async function buildWorker() {
 
     console.log(`${success} Worker minified successfuly!`);
 
-    const base64Gzip = gzipSync(script, { level: 9 }).toString("base64");
+    const base64Gzip = gzipSync(script, { level: 9 }).toString('base64');
 
     const embededContents = {
         SOURCE_CONTENT: base64Gzip,
@@ -99,19 +99,29 @@ async function buildWorker() {
         LOGIN_HTML_CONTENT: htmls['login'],
         ERROR_HTML_CONTENT: htmls['error'],
         PROXY_IP_HTML_CONTENT: htmls['proxy-ip'],
+        SETUP_HTML_CONTENT: htmls['setup'],
         ICON_CONTENT: faviconBase64
     };
 
-    const worker = `Object.assign(globalThis, ${JSON.stringify(embededContents)});${script}`;
+    const banner = [
+        `// ⚗️ ARAL SULFUR v${pkg.version} — Cloudflare Workers Standalone Edition`,
+        `// Repo: https://github.com/Aral-Dev/Aral-Sulfur`,
+        `// Build: ${new Date().toISOString()}`,
+        `// Deploy: paste this whole file as a single Worker (ESM). KV binding name: KV`,
+        ''
+    ].join('\n');
+
+    const worker = `${banner}Object.assign(globalThis, ${JSON.stringify(embededContents)});\n${script}`;
 
     mkdirSync(DIST_PATH, { recursive: true });
+    // dist/worker.js (kept for compatibility) and the repo-root single file
     writeFileSync('./dist/worker.js', worker, 'utf8');
+    writeFileSync(join(ROOT_PATH, 'worker-single-file.js'), worker, 'utf8');
 
-    console.log(`${success} Done!`);
+    console.log(`${success} Done! → dist/worker.js + worker-single-file.js (repo root)`);
 }
 
 buildWorker().catch(err => {
     console.error(`${failure} Build failed:`, err);
     process.exit(1);
 });
-

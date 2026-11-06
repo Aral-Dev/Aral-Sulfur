@@ -1,6 +1,6 @@
 import { WarpAccount } from '#types/settings';
-import { getWarpAccounts } from '@settings';
-import { generateKeyPairSync } from 'node:crypto';
+import { getWarpAccounts, getKV } from '@settings';
+import { generateX25519KeyPairBase64 } from '@common/sha';
 
 interface WarpKeys {
     publicKey: string;
@@ -30,7 +30,7 @@ export async function fetchWarpAccounts(env: Env): Promise<WarpAccount[]> {
             if (index === 0) await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        await env.kv.put('warpAccounts', JSON.stringify(warpAccounts));
+        await getKV().put('warpAccounts', JSON.stringify(warpAccounts));
         return warpAccounts;
 
     } catch (error) {
@@ -70,13 +70,5 @@ async function fetchAccount(key: WarpKeys): Promise<any> {
 }
 
 async function generateKeyPair(): Promise<WarpKeys> {
-    const { publicKey, privateKey } = generateKeyPairSync('x25519', {
-        publicKeyEncoding: { type: 'spki', format: 'der' },
-        privateKeyEncoding: { type: 'pkcs8', format: 'der' }
-    });
-
-    return {
-        publicKey: publicKey.subarray(-32).toString('base64'),
-        privateKey: privateKey.subarray(-32).toString('base64')
-    };
+    return generateX25519KeyPairBase64();
 }

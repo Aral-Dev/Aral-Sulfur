@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aral Sulfur Setup</title>
+    <link id="favicon" rel="icon" type="image/x-icon" href="data:image/x-icon;base64,__ICON__">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sulfur: #f5d90a;
+            --sulfur-deep: #c9a900;
+            --sulfur-soft: rgba(245, 217, 10, 0.13);
+            --sulfur-line: rgba(245, 217, 10, 0.32);
+            --neon: #00ff9d;
+            --err: #ff5545;
+            --bg: #0a0906;
+            --txt: #f0ede4;
+            --body-txt: #d6d1c4;
+            --mut: #9a9484;
+            --dim: #5c574c;
+            --panel: #161307;
+            --field: #0e0c05;
+            --glass: rgba(22, 19, 7, 0.6);
+            --hairline: rgba(245, 217, 10, 0.09);
+            --btn-txt: #141200;
+            --cut: 10px;
+            --cut-lg: 16px;
+            --radius: 0.55rem;
+            --mono: 'JetBrains Mono', ui-monospace, monospace;
+            --fa: 'Vazirmatn', system-ui;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+            padding: 2rem 1rem;
+            font-family: var(--fa);
+            color: var(--txt);
+            background:
+                radial-gradient(ellipse 70% 60% at 50% 25%, rgba(245, 217, 10, 0.06), transparent 75%),
+                var(--bg);
+            text-align: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            pointer-events: none;
+            background-image:
+                linear-gradient(45deg, rgba(245, 217, 10, 0.03) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(245, 217, 10, 0.03) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(245, 217, 10, 0.03) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(245, 217, 10, 0.03) 75%);
+            background-size: 42px 42px;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.12) 3px 4px);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        #header-logo {
+            width: 44px;
+            height: 44px;
+            filter: drop-shadow(0 0 10px rgba(245, 217, 10, 0.45));
+            border-radius: 6px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', var(--mono);
+            font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: 0.08em;
+            margin: 0;
+            direction: ltr;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+        }
+
+        h1 b { color: var(--sulfur); }
+
+        h1::before, h1::after {
+            content: attr(data-text) / "";
+            position: absolute;
+            inset: 0;
+        }
+
+        h1::before {
+            color: var(--sulfur);
+            animation: gl1 3.4s infinite steps(1);
+        }
+
+        h1::after {
+            color: var(--neon);
+            animation: gl2 2.8s infinite steps(1);
+        }
+
+        @keyframes gl1 {
+            0%, 92% { transform: none; opacity: 0; }
+            93% { transform: translate(-3px, 2px); opacity: 0.8; }
+            96% { transform: translate(3px, -2px); opacity: 0.8; }
+            100% { transform: none; opacity: 0; }
+        }
+
+        @keyframes gl2 {
+            0%, 90% { transform: none; opacity: 0; }
+            91% { transform: translate(3px, 1px); opacity: 0.7; }
+            95% { transform: translate(-3px, -1px); opacity: 0.7; }
+            100% { transform: none; opacity: 0; }
+        }
+
+        .card {
+            position: relative;
+            width: min(94vw, 560px);
+            padding: 1.6rem 1.4rem 1.8rem;
+            background: var(--glass);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--hairline);
+            clip-path: polygon(var(--cut-lg) 0, 100% 0, 100% calc(100% - var(--cut-lg)), calc(100% - var(--cut-lg)) 100%, 0 100%, 0 var(--cut-lg));
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 84px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--sulfur), transparent);
+        }
+
+        h2 { font-size: 1.05rem; margin: 0; font-weight: 800; }
+
+        .hint {
+            color: var(--mut);
+            font-size: 0.8rem;
+            line-height: 1.9;
+            margin: 0;
+        }
+
+        .hint b { color: var(--sulfur-deep); }
+
+        .step {
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+
+        .field label {
+            color: var(--mut);
+            font-size: 0.82rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .field label .rand {
+            color: var(--sulfur-deep);
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .field label .rand:hover { color: var(--sulfur); }
+
+        input {
+            width: 100%;
+            direction: ltr;
+            text-align: left;
+            padding: 10px 14px;
+            background: var(--field);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            color: var(--txt);
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+        }
+
+        input:focus {
+            border-color: var(--sulfur);
+            box-shadow: 0 0 0 2px var(--sulfur-soft), 0 0 18px rgba(245, 217, 10, 0.18);
+        }
+
+        .row { display: flex; gap: 0.9rem; }
+        .row .field { flex: 1; }
+
+        .msg {
+            min-height: 1.4em;
+            font-size: 0.82rem;
+            margin: 0;
+            color: var(--err);
+        }
+
+        .msg.ok { color: var(--neon); }
+
+        button.primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 30px;
+            font-family: var(--fa);
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: var(--btn-txt);
+            background: var(--sulfur);
+            border: 1px solid var(--sulfur);
+            clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s;
+            align-self: center;
+        }
+
+        button.primary:hover {
+            box-shadow: 0 0 22px rgba(245, 217, 10, 0.45);
+            transform: translateY(-1px);
+        }
+
+        button.primary:disabled {
+            opacity: 0.5;
+            cursor: wait;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .aral-footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .aral-footer a {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            color: var(--mut);
+            text-decoration: none;
+            direction: ltr;
+            padding: 4px 12px;
+            border: 1px solid var(--hairline);
+            background: var(--field);
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .aral-footer a:hover { color: var(--sulfur); border-color: var(--sulfur-line); }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <img id="header-logo" src="data:image/x-icon;base64,__ICON__" alt="Aral Sulfur Logo" width="48" height="48">
+        <h1 data-text="Aral Sulfur">Aral <b>Sulfur</b></h1>
+    </div>
+
+    <div class="card">
+        <h2>⚗️ First-Time Setup</h2>
+        <p class="hint">
+            Welcome to <b>Aral Sulfur</b>! Fill in your Cloudflare account details to activate the panel.
+            The API token needs <b>Workers Scripts: Edit</b> permission (used for in-panel updates).
+            Everything is stored in your own KV storage.
+        </p>
+
+        <form id="setupForm" class="step" autocomplete="off">
+            <div class="field">
+                <label for="accEmail">Cloudflare Email</label>
+                <input type="text" id="accEmail" name="accEmail" placeholder="you@example.com" required>
+            </div>
+            <div class="field">
+                <label for="apiToken">Cloudflare API Token <span class="rand" onclick="event.preventDefault()">Workers Scripts:Edit</span></label>
+                <input type="password" id="apiToken" name="apiToken" placeholder="v1.0-..." required>
+            </div>
+            <div class="field">
+                <label for="panelPass">Panel Login Password <span class="rand" onclick="randPass()" title="Generate random">↻ random</span></label>
+                <input type="password" id="panelPass" name="panelPass" placeholder="Choose a strong password" required>
+            </div>
+            <div class="field">
+                <label for="vlUUID">VLESS UUID <span class="rand" onclick="randUUID()" title="Generate random">↻ random</span></label>
+                <input type="text" id="vlUUID" name="vlUUID" placeholder="36fb4f0e-..." required>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <label for="trPass">Trojan Password <span class="rand" onclick="randTrojan()" title="Generate random">↻</span></label>
+                    <input type="text" id="trPass" name="trPass" placeholder="Trojan password" required>
+                </div>
+                <div class="field">
+                    <label for="securePath">Secure Path <span class="rand" onclick="randPath()" title="Generate random">↻</span></label>
+                    <input type="text" id="securePath" name="securePath" placeholder="panel" required>
+                </div>
+            </div>
+            <p id="setupMsg" class="msg"></p>
+            <button type="submit" id="setupBtn" class="primary">⚡ Activate Panel</button>
+        </form>
+    </div>
+
+    <div class="aral-footer">
+        <a href="https://t.me/AralDev">t.me/AralDev</a>
+        <a href="https://t.me/AralPanel">t.me/AralPanel</a>
+        <a href="https://youtube.com/@Aral-Dev">@Aral-Dev</a>
+        <a href="https://github.com/Aral-Dev/Aral-Sulfur">Aral-Dev</a>
+    </div>
+
+    <script>
+        function randHex(n) {
+            const arr = new Uint8Array(n);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function randUUID() {
+            const h = randHex(16);
+            document.getElementById('vlUUID').value =
+                `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+        }
+
+        function randPass() {
+            document.getElementById('panelPass').value = randHex(12);
+        }
+
+        function randTrojan() {
+            document.getElementById('trPass').value = randHex(8);
+        }
+
+        function randPath() {
+            document.getElementById('securePath').value = randHex(6);
+        }
+
+        document.getElementById('setupForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const btn = document.getElementById('setupBtn');
+            const msg = document.getElementById('setupMsg');
+            msg.className = 'msg';
+            msg.textContent = '⏳ Validating your Cloudflare token...';
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    accEmail: document.getElementById('accEmail').value.trim(),
+                    apiToken: document.getElementById('apiToken').value.trim(),
+                    panelPass: document.getElementById('panelPass').value,
+                    vlUUID: document.getElementById('vlUUID').value.trim(),
+                    trPass: document.getElementById('trPass').value.trim(),
+                    securePath: document.getElementById('securePath').value.trim().replace(/^\/+|\/+$/g, '')
+                };
+
+                const res = await fetch('./setup/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const { success, status, message, body } = await res.json();
+
+                if (!success) throw new Error(message || `status ${status}`);
+
+                msg.className = 'msg ok';
+                msg.textContent = `✅ Panel activated! Redirecting to login... (path: /${body.securePath}/login)`;
+                setTimeout(() => {
+                    window.location.href = `/${body.securePath}/login`;
+                }, 2500);
+            } catch (error) {
+                msg.className = 'msg';
+                msg.textContent = `❌ ${error.message || 'Setup failed. Please try again.'}`;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

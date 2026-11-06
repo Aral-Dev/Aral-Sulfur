@@ -2,7 +2,7 @@ import { DnsHost, KvSettings, PanelSettings, TelegramBot, WarpAccount } from '#t
 import { extractProxyParams, extractUpstreamParams, getDomain, resolveDNS } from '@utils';
 import { fetchWarpAccounts } from '@api/warp';
 import { safeError } from '@common';
-import { getKvSettings } from '@settings';
+import { getKvSettings, getKV } from '@settings';
 import { setCustomDomain } from '@main';
 
 export async function getDataset(env: Env): Promise<{
@@ -14,10 +14,10 @@ export async function getDataset(env: Env): Promise<{
     const kvSettings = getKvSettings();
 
     try {
-        settings = await env.kv.get('proxySettings', { type: 'json' });
-        warpAccounts = await env.kv.get('warpAccounts', { type: 'json' });
+        settings = await getKV().get('proxySettings', { type: 'json' });
+        warpAccounts = await getKV().get('warpAccounts', { type: 'json' });
         if (!settings) {
-            await env.kv.put('proxySettings', JSON.stringify(kvSettings));
+            await getKV().put('proxySettings', JSON.stringify(kvSettings));
             settings = kvSettings;
         }
 
@@ -29,10 +29,10 @@ export async function getDataset(env: Env): Promise<{
             settings = await updateDataset(env);
         }
 
-        let telegramBot: TelegramBot | null = await env.kv.get('telegramBot', { type: 'json' });
+        let telegramBot: TelegramBot | null = await getKV().get('telegramBot', { type: 'json' });
         if (!telegramBot) {
             telegramBot = { telegramBotToken: '', telegramUserId: '' };
-            await env.kv.put('telegramBot', JSON.stringify(telegramBot));
+            await getKV().put('telegramBot', JSON.stringify(telegramBot));
         }
 
         return {
@@ -49,7 +49,7 @@ export async function getDataset(env: Env): Promise<{
 export async function updateDataset(env: Env, newSettings?: PanelSettings): Promise<KvSettings> {
     if (!newSettings) {
         const kvSettings = getKvSettings();
-        await env.kv.put('proxySettings', JSON.stringify(kvSettings));
+        await getKV().put('proxySettings', JSON.stringify(kvSettings));
         return kvSettings;
     }
 
@@ -57,7 +57,7 @@ export async function updateDataset(env: Env, newSettings?: PanelSettings): Prom
     const kvSettings = getKvSettings();
 
     try {
-        currentSettings = await env.kv.get('proxySettings', { type: 'json' });
+        currentSettings = await getKV().get('proxySettings', { type: 'json' });
     } catch (error) {
         console.log(error);
         throw new Error(`An error occurred while getting current KV settings: ${safeError(error)}`);
@@ -174,7 +174,7 @@ export async function updateDataset(env: Env, newSettings?: PanelSettings): Prom
             panelVersion: VERSION
         };
 
-        await env.kv.put('proxySettings', JSON.stringify(updatedSettings));
+        await getKV().put('proxySettings', JSON.stringify(updatedSettings));
         return updatedSettings;
     } catch (error) {
         console.log(error);

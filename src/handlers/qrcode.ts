@@ -117,13 +117,23 @@ export async function generateQRCode(request: Request): Promise<Response> {
     const { searchParams, origin } = getGlobals();
     const data = searchParams.get('data') ?? '';
 
-    const target = new URL(data);
+    // malformed / hostile data must never throw (1101 protection)
+    let target: URL;
+    try {
+        target = new URL(data);
+    } catch {
+        return fallback(request);
+    }
     const proto = target.protocol;
 
     let url: URL = target;
     if (proto === 'sing-box:') {
         const singUrl = target.searchParams.get('url') ?? '';
-        url = new URL(singUrl);
+        try {
+            url = new URL(singUrl);
+        } catch {
+            return fallback(request);
+        }
     }
 
     if (url.origin !== origin) {

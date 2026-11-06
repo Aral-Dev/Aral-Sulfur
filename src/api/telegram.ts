@@ -1,5 +1,5 @@
 import { HttpStatus, respond, safeError } from '@common';
-import { clients, getGlobals, subscriptions } from '@settings';
+import { clients, getGlobals, subscriptions, getKV } from '@settings';
 import { getCfWorkerUsage } from './usage';
 import { authenticate } from '@auth';
 import { TelegramBot } from '#types/settings';
@@ -31,7 +31,7 @@ export async function setupTelegramWebhook(request: Request, env: Env): Promise<
             telegramUserId: userID
         };
 
-        await env.kv.put('telegramBot', JSON.stringify(bot));
+        await getKV().put('telegramBot', JSON.stringify(bot));
         return respond(true, HttpStatus.OK, 'Telegram bot setup completed successfully!', bot);
     } catch (error) {
         return respond(false, HttpStatus.INTERNAL_SERVER_ERROR, `Error occurred while setting Telegram Bot: ${safeError(error)}`);
@@ -84,7 +84,7 @@ export async function removeTelegramBot(request: Request, env: Env) {
             return respond(false, HttpStatus.UNAUTHORIZED, 'Unauthorized or expired session.');
         }
 
-        const { telegramBotToken } = await env.kv.get('telegramBot', { type: 'json' }) as any;
+        const { telegramBotToken } = await getKV().get('telegramBot', { type: 'json' }) as any;
         const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/deleteWebhook`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ export async function removeTelegramBot(request: Request, env: Env) {
         }
 
         const bot: TelegramBot = { telegramBotToken: '', telegramUserId: '' };
-        await env.kv.put('telegramBot', JSON.stringify(bot));
+        await getKV().put('telegramBot', JSON.stringify(bot));
 
         return respond(true, HttpStatus.OK, 'Telegram bot webhook deleted successfully!', bot);
     } catch (error) {
@@ -416,7 +416,7 @@ async function handleCallback(cq: TgCallbackQuery, token: string, chatId: number
 }
 
 export async function handleTelegramWebhook(request: Request, env: Env): Promise<Response> {
-    const tgBot: TelegramBot | null = await env.kv.get('telegramBot', { type: 'json' });
+    const tgBot: TelegramBot | null = await getKV().get('telegramBot', { type: 'json' });
     if (!tgBot) return new Response(null, { status: 200 });
 
     const { telegramBotToken: botToken, telegramUserId: userId } = tgBot;

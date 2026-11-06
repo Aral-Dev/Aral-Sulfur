@@ -1,16 +1,16 @@
 import { PanelSettings, TelegramBot } from '#types/settings';
-import { deployPages, deletePagesProject } from '@api/pages';
 import { getUsage } from '@api/usage';
 import { fetchWarpAccounts } from '@api/warp';
-import { deployWorkers, deleteWorker } from '@api/workers';
 import { resetPassword, logout, authenticate } from '@auth';
 import { decompressGzipBase64, respond, HttpStatus, safeError } from '@common';
 import { getDataset, updateDataset } from '@kv';
-import { buildScript, updateMainSettings } from '@main';
-import { getGlobals, getMainSettings, subscriptions, clients } from '@settings';
+import { updateMainSettings, applySelfUpdate, fetchLatestVersion, setCustomDomain } from '@main';
+import { getGlobals, getMainSettings, getKV, subscriptions, clients } from '@settings';
 import { validateSettings } from '@validators';
 import { fallback } from './utils';
 import { setTelegramBot } from '@api/telegram';
+import { deleteWorker } from '@api/workers';
+import { deletePagesProject } from '@api/pages';
 
 export async function handlePanel(request: Request, env: Env): Promise<Response> {
     const { pathname } = getGlobals();
@@ -42,6 +42,9 @@ export async function handlePanel(request: Request, env: Env): Promise<Response>
         case 'panel/update-panel':
             return updatePanel(request, env);
 
+        case 'panel/latest-version':
+            return latestVersion(request, env);
+
         case 'panel/delete-panel':
             return deletePanel(request, env);
 
@@ -57,7 +60,8 @@ export async function handlePanel(request: Request, env: Env): Promise<Response>
 }
 
 async function renderPanel(request: Request, env: Env): Promise<Response> {
-    const pwd = await env.kv.get('pwd');
+    const kv = getKV();
+    const pwd = await kv.get('pwd');
     if (pwd) {
         const auth = await authenticate(request, env);
         if (!auth) {
@@ -74,6 +78,25 @@ async function renderPanel(request: Request, env: Env): Promise<Response> {
     });
 }
 
+/** Reports the newest published version on the Aral Sulfur repo. */
+async function latestVersion(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'GET') {
+        return respond(false, HttpStatus.METHOD_NOT_ALLOWED, 'Method not allowed.');
+    }
+
+    try {
+        const auth = await authenticate(request, env);
+        if (!auth) {
+            return respond(false, HttpStatus.UNAUTHORIZED, 'Unauthorized or expired session.');
+        }
+
+        const latest = await fetchLatestVersion();
+        return respond(true, HttpStatus.OK, undefined, { latest });
+    } catch (error) {
+        return respond(false, HttpStatus.INTERNAL_SERVER_ERROR, safeError(error));
+    }
+}
+
 async function updatePanel(request: Request, env: Env): Promise<Response> {
     if (request.method !== 'POST') {
         return respond(false, HttpStatus.METHOD_NOT_ALLOWED, 'Method not allowed.');
@@ -85,15 +108,21 @@ async function updatePanel(request: Request, env: Env): Promise<Response> {
             return respond(false, HttpStatus.UNAUTHORIZED, 'Unauthorized or expired session.');
         }
 
-        const { deployType } = getGlobals();
-        const script = await buildScript(true);
-        if (deployType === 'pages') {
-            await deployPages(script);
-        } else {
-            await deployWorkers(script);
+        const { accID, apiToken, mainDomain } = getGlobals();
+        if (!apiToken) {
+            return respond(false, HttpStatus.BAD_REQUEST,
+                'Cloudflare API token is not set. It is configured during panel setup (stored in your KV).');
         }
 
-        return respond(true, HttpStatus.OK);
+        const scriptName = mainDomain.split('.')[0];
+        if (!scriptName) {
+            return respond(false, HttpStatus.BAD_REQUEST, 'Could not resolve the worker name from the current host.');
+        }
+
+        const { previousVersion } = await applySelfUpdate({ apiToken, accountId: accID, scriptName });
+
+        return respond(true, HttpStatus.OK,
+            `Panel updated successfully from v${previousVersion} to the latest version!`, { previousVersion });
     } catch (error) {
         return respond(
             false,
@@ -132,7 +161,8 @@ async function deletePanel(request: Request, env: Env): Promise<Response> {
 }
 
 async function getPanelSettings(request: Request, env: Env): Promise<Response> {
-    const isPassSet = Boolean(await env.kv.get('pwd'));
+    const kv = getKV();
+    const isPassSet = Boolean(await kv.get('pwd'));
 
     try {
         const auth = await authenticate(request, env);
@@ -141,9 +171,16 @@ async function getPanelSettings(request: Request, env: Env): Promise<Response> {
         }
 
         const { settings: kvSettings, telegramBot } = await getDataset(env);
-        const mainSettings = getMainSettings();
+        const { accID, accEmail, apiToken, ...mainOnly } = getMainSettings();
+
         const data = {
-            proxySettings: { ...kvSettings, ...mainSettings },
+            proxySettings: {
+                ...kvSettings,
+                ...mainOnly,
+                // credentials are masked but the panel can tell they exist
+                accEmail,
+                hasApiToken: Boolean(apiToken)
+            },
             telegramSettings: telegramBot,
             subscriptions,
             clients,
@@ -181,16 +218,25 @@ async function updatePanelSettings(request: Request, env: Env): Promise<Response
         const errors = validateSettings(newSettings);
         if (errors) return respond(false, HttpStatus.BAD_REQUEST, 'Validation Error', errors);
 
+        const { securePath } = getGlobals();
         await Promise.all([
             updateDataset(env, newSettings),
             updateMainSettings(newSettings)
         ]);
 
-        const { securePath } = getGlobals();
         if (newSettings.securePath !== securePath) {
-            const bot: TelegramBot | null = await env.kv.get('telegramBot', { type: 'json' });
+            const kv = getKV();
+            const bot: TelegramBot | null = await kv.get('telegramBot', { type: 'json' });
             if (bot) {
                 await setTelegramBot(newSettings.securePath, bot.telegramBotToken);
+            }
+        }
+
+        if (newSettings.customDomain) {
+            try {
+                await setCustomDomain(newSettings.customDomain);
+            } catch (error) {
+                console.log('Custom domain error:', safeError(error));
             }
         }
 
@@ -241,7 +287,7 @@ async function getMyIP(request: Request): Promise<Response> {
             false,
             HttpStatus.INTERNAL_SERVER_ERROR,
             `Error fetching IP address: ${safeError(error)}`
-        )
+        );
     }
 }
 

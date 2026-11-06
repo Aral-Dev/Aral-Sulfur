@@ -103,16 +103,11 @@ async function getUsage() {
 
 async function checkVersion(panelVersion) {
     try {
-        const res = await fetch('https://raw.githubusercontent.com/Aral-Dev/Aral-Sulfur/refs/heads/main/package.json', {
-            cache: 'no-store'
-        });
+        const res = await fetch(`./panel/latest-version?nocache=${Date.now()}`, { cache: 'no-store' });
+        const { success, body } = await res.json();
+        const latest = success ? body?.latest : null;
+        if (!latest) throw new Error('no version');
 
-        if (!res.ok) {
-            throw new Error(`status ${res.status}`);
-        }
-
-        const pkg = await res.json();
-        const latest = pkg.version;
         globalThis.latestVersion = latest;
         const updateAvailable = isNewerVersion(latest, panelVersion);
         const upgradeBtn = document.getElementById('updatePanel');
@@ -935,7 +930,7 @@ async function updatePanel(btn) {
         .then(res => res.json())
         .then(({ success, status, message }) => {
             if (!success) throw new Error(`status ${status} - ${message}`);
-            notify('success', 'Update panel', ['Your Aral Sulfur panel upgraded successfully!']);
+            notify('success', 'Update panel', [message || 'Your Aral Sulfur panel upgraded successfully!']);
             setTimeout(() => {
                 location.reload();
             }, 3000);

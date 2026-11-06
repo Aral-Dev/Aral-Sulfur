@@ -21,6 +21,7 @@
             "@settings": ["./src/settings/settings"],
             "@validators": ["./src/settings/validators"],
             "@common": ["./src/common/common"],
+            "@common/*": ["./src/common/*"],
             "@kv": ["./src/settings/kv"],
             "@main": ["./src/settings/main"],
             "@api/*": ["./src/api/*"],

@@ -1,6 +1,6 @@
 import { generateJWTToken, authenticate } from '@auth';
 import { decompressGzipBase64 } from '@common';
-import { getGlobals } from '@settings';
+import { getGlobals, getKV } from '@settings';
 import { fallback } from './utils';
 
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
@@ -23,7 +23,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 async function renderLogin(request: Request, env: Env): Promise<Response> {
     const auth = await authenticate(request, env);
     if (auth) {
-        const panelURL = new URL('./panel', request.url)
+        const panelURL = new URL('./panel', request.url);
         return Response.redirect(panelURL, 302);
     }
 

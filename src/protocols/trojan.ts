@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { sha224Hex } from '@common/sha';
 import { getGlobals } from '@settings';
 import { handleTCPOutBound, makeReadableWebSocketStream, safeCloseTcpSocket } from '@protocols/common';
 
@@ -101,7 +101,7 @@ function parseTrHeader(buffer: ArrayBuffer) {
 
     const { trPass } = getGlobals();
     const password = new TextDecoder().decode(buffer.slice(0, crLfIndex));
-    if (password !== createHash('sha224').update(trPass).digest('hex')) {
+    if (password !== sha224Hex(trPass)) {
         return {
             hasError: true,
             message: 'invalid password',

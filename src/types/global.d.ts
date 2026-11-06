@@ -2,19 +2,19 @@ import { EmbededSettings } from './settings';
 
 declare global {
     interface Env {
-        readonly CF_PAGES: string;
-        readonly kv: KVNamespace;
-        readonly UUID?: string;
-        readonly TR_PASS?: string;
+        readonly CF_PAGES?: string;
+        readonly aral?: KVNamespace;
+        readonly KV?: KVNamespace;
+        readonly kv?: KVNamespace;
     }
 
     const SOURCE_CONTENT: string;
-    const EMBEDED_SETTINGS: EmbededSettings;
     const VERSION: string;
     const ERROR_HTML_CONTENT: string;
     const PANEL_HTML_CONTENT: string;
     const LOGIN_HTML_CONTENT: string;
     const PROXY_IP_HTML_CONTENT: string;
+    const SETUP_HTML_CONTENT: string;
     const ICON_CONTENT: string;
     const _VL_: string;
     const _VL_CAP_: string;

@@ -1,6 +1,6 @@
 {
 	"name": "aral-sulfur-panel",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"homepage": "https://github.com/Aral-Dev/Aral-Sulfur",
 	"license": "GPL-3.0",
 	"private": true,
@@ -25,8 +25,7 @@
 		"typescript": "^6.0.3"
 	},
 	"dependencies": {
-		"jose": "^6.2.3",
-		"jszip": "^3.10.1",
-		"qrcode-generator": "^2.0.4"
+		"qrcode-generator": "^2.0.4",
+		"jszip": "^3.10.1"
 	}
 }
