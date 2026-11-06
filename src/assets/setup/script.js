@@ -1,1 +1,0 @@
-/* logic is inlined in index.html for the standalone setup page */
