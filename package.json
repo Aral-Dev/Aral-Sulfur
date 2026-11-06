@@ -1,0 +1,7 @@
+{
+  "name": "aral-sulfur",
+  "version": "4.0.0",
+  "description": "Aral Sulfur — Cloudflare Workers VLESS+Trojan panel, BPB-VPN tunnel architecture",
+  "main": "worker-single-file.js",
+  "license": "MIT"
+}
