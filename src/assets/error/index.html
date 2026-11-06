@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aral Sulfur v__VERSION__</title>
+    <link id="favicon" rel="icon" type="image/x-icon" href="data:image/x-icon;base64,__ICON__">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sulfur: #f5d90a;
+            --sulfur-deep: #c9a900;
+            --sulfur-soft: rgba(245, 217, 10, 0.13);
+            --sulfur-line: rgba(245, 217, 10, 0.32);
+            --neon: #00ff9d;
+            --err: #ff5545;
+            --bg: #0a0906;
+            --txt: #f0ede4;
+            --body-txt: #d6d1c4;
+            --mut: #9a9484;
+            --dim: #5c574c;
+            --panel: #161307;
+            --field: #0e0c05;
+            --hairline: rgba(245, 217, 10, 0.09);
+            --cut-lg: 16px;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+        }
+
+        body,
+        html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Vazirmatn', system-ui;
+            color: var(--body-txt);
+            background:
+                radial-gradient(ellipse 70% 60% at 50% 30%, rgba(245, 217, 10, 0.06), transparent 75%),
+                var(--bg);
+            text-align: center;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image:
+                linear-gradient(45deg, rgba(245, 217, 10, 0.03) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(245, 217, 10, 0.03) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(245, 217, 10, 0.03) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(245, 217, 10, 0.03) 75%);
+            background-size: 42px 42px;
+        }
+
+        .error-card {
+            position: relative;
+            max-width: 560px;
+            width: 100%;
+            padding: 2rem 1.6rem;
+            background: rgba(22, 19, 7, 0.6);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--hairline);
+            clip-path: polygon(var(--cut-lg) 0, 100% 0, 100% calc(100% - var(--cut-lg)), calc(100% - var(--cut-lg)) 100%, 0 100%, 0 var(--cut-lg));
+        }
+
+        .error-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 84px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--sulfur), transparent);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        #header-logo {
+            width: 44px;
+            height: 44px;
+            filter: drop-shadow(0 0 10px rgba(245, 217, 10, 0.45));
+            border-radius: 6px;
+        }
+
+        h1 {
+            color: var(--txt);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.55rem;
+            font-family: 'Orbitron', var(--font-mono);
+            font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: 0.08em;
+            margin: 0;
+            direction: ltr;
+            text-transform: uppercase;
+        }
+
+        h1 b {
+            color: var(--sulfur);
+        }
+
+        .panel-version {
+            align-self: flex-start;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--sulfur-deep);
+            border: 1px solid var(--sulfur-line);
+            background: var(--sulfur-soft);
+            padding: 1px 10px;
+            letter-spacing: 0.06em;
+        }
+
+        h2 {
+            color: var(--err);
+            font-size: 1.1rem;
+            margin: 1.4rem 0 0.6rem;
+        }
+
+        p {
+            margin: 0;
+            font-size: 0.88rem;
+            line-height: 1.9;
+            word-break: break-word;
+        }
+
+        p b {
+            color: var(--txt);
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+        }
+
+        .aral-links {
+            margin-top: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .aral-links a {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            color: var(--mut);
+            text-decoration: none;
+            direction: ltr;
+            padding: 4px 12px;
+            border: 1px solid var(--hairline);
+            background: var(--field);
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .aral-links a:hover {
+            color: var(--sulfur);
+            border-color: var(--sulfur-line);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="error-container" class="error-card">
+        <div class="header">
+            <img id="header-logo" src="data:image/x-icon;base64,__ICON__" alt="Aral Sulfur Logo" width="48" height="48">
+            <h1>Aral <b>Sulfur</b></h1>
+            <span class="panel-version">
+                v__VERSION__
+            </span>
+        </div>
+
+        <div>
+            <h2>❌ Something went wrong!</h2>
+            <p>
+                <b>__ERROR_MESSAGE__</b>
+            </p>
+        </div>
+
+        <div class="aral-links">
+            <a href="https://t.me/AralDev" target="_blank" rel="noopener noreferrer">t.me/AralDev</a>
+            <a href="https://t.me/AralPanel" target="_blank" rel="noopener noreferrer">t.me/AralPanel</a>
+            <a href="https://youtube.com/@Aral-Dev" target="_blank" rel="noopener noreferrer">@Aral-Dev</a>
+            <a href="https://github.com/Aral-Dev/Aral-Sulfur" target="_blank" rel="noopener noreferrer">Aral-Dev</a>
+        </div>
+    </div>
+
+</body>
+
+</html>
