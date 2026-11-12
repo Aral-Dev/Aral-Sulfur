@@ -1,0 +1,18 @@
+name = "aral-sulfur"
+main = "worker-single-file.js"
+compatibility_date = "2026-04-01"
+
+# Cloudflare KV storage for the multi-user ARAL SULFUR panel, subscriptions,
+# per-user quotas, locations, pools, fragment & routing settings.
+# Dashboard deploy: paste `worker-single-file.js` via "Start with Hello World -> Edit code",
+# then in Settings -> Bindings -> Add KV Namespace with variable name `KV`.
+# Wrangler CLI deploy: run `npx wrangler kv namespace create KV` and replace `id` below.
+[[kv_namespaces]]
+binding = "KV"
+id = "00000000000000000000000000000000"
+
+[vars]
+PROXYIP = ""
+
+[observability]
+enabled = false

@@ -1,0 +1,141 @@
+<!doctype html>
+<!--
+  ARAL URANIUM · SNI Clean-IP Scanner (v1.0)
+  Free & open-source · part of the ARAL URANIUM Panel project (t.me/AralDev)
+  ---------------------------------------------------------------------------
+  This is a POLYGLOT file. Save it as `aral-scanner.html` and open it in a
+  browser for the guide, OR run it as a Python script, OR use the PowerShell
+  section. It scans candidate Cloudflare edge IPs by opening a real TLS
+  connection with your panel domain as SNI — if the handshake succeeds, the
+  IP is a clean entry candidate for the panel's Clean IP list.
+-->
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ARAL URANIUM · SNI Scanner</title>
+<style>
+  body{font-family:Tahoma,system-ui,sans-serif;background:#0c0b09;color:#f0e7cf;padding:24px;line-height:1.8;max-width:760px;margin:0 auto}
+  h1{color:#d4af37;font-size:1.3rem;border-bottom:2px solid #d4af37;padding-bottom:8px}
+  code{background:#1d1912;padding:2px 6px;border:1px solid #d4af37;direction:ltr;display:inline-block}
+  ol li{margin-bottom:8px}
+  .mono{direction:ltr;text-align:left;background:#14120d;padding:10px;border:1px solid #d4af37;word-break:break-all;font-family:monospace;font-size:.8rem}
+</style>
+</head>
+<body>
+<h1>ARAL URANIUM · اسکنر IP تمیز (SNI)</h1>
+<ol>
+  <li><b>اندروید:</b> برنامهٔ <code>Pydroid 3</code> را نصب کنید، همین فایل را با پسوند <code>.py</code> ذخیره و اجرا کنید.</li>
+  <li><b>ویندوز:</b> PowerShell را باز کنید و بخش پایین را کپی کنید.</li>
+  <li>دامنهٔ پنل (workers.dev یا دامنهٔ اختصاصی) را وقتی پرسیده شد وارد کنید. نتیجه = نامزدِ تمیز برای بخش «IPهای تمیز» پنل.</li>
+</ol>
+<p class="mono">python3 aral-scanner.py --domain your-panel.workers.dev --count 40 --out clean.txt</p>
+<script>/* browser mode prints instructions only — the scanners run locally by design */</script>
+</body>
+</html>
+<!--PYTHON
+#!/usr/bin/env python3
+"""ARAL URANIUM SNI Clean-IP scanner (Python section) — free & open-source."""
+import argparse, socket, ssl, concurrent.futures as cf, sys
+
+TLS_PORTS = (443, 2053, 2083, 2087, 2096, 8443)
+
+def scan_ip(ip: str, sni: str, port: int = 443, timeout: float = 3.0) -> str | None:
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((ip, port), timeout=timeout) as raw:
+            with ctx.wrap_socket(raw, server_hostname=sni) as tls:
+                cert = tls.getpeercert()
+                cn = dict(x[0] for x in cert.get("subjectAltName", ()) if x[0].startswith("DNS")) or {}
+                if cert and (sni in str(cert.get("subject", "")) or sni in cn or True):
+                    return ip
+    except Exception:
+        return None
+    return None
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="ARAL URANIUM SNI scanner")
+    ap.add_argument("--domain", required=True, help="your panel domain (SNI)")
+    ap.add_argument("--port", type=int, default=443, choices=TLS_PORTS)
+    ap.add_argument("--count", type=int, default=50, help="random CF IPs to try when no list given")
+    ap.add_argument("--file", help="optional candidate list (one IP per line)")
+    ap.add_argument("--timeout", type=float, default=3.0)
+    ap.add_argument("--out", default="clean.txt")
+    a = ap.parse_args()
+
+    if a.file:
+        candidates = [l.strip() for l in open(a.file, encoding="utf-8") if l.strip()]
+    else:
+        # sample from Cloudflare's official published ranges (docs: https://www.cloudflare.com/ips/)
+        import random, ipaddress
+        v4 = ["173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","141.101.64.0/18",
+              "108.162.192.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17",
+              "162.158.0.0/15","104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","131.0.72.0/22"]
+        pool = []
+        for net in v4:
+            pool.extend(str(h) for h in ipaddress.ip_network(net).hosts())
+        random.shuffle(pool)
+        candidates = pool[: max(1, a.count)]
+
+    print(f"[*] ARAL URANIUM scanner · SNI={a.domain} port={a.port} · {len(candidates)} candidates")
+    clean = []
+    with cf.ThreadPoolExecutor(max_workers=32) as ex:
+        for res in ex.map(lambda ip: scan_ip(ip, a.domain, a.port, a.timeout), candidates):
+            if res:
+                clean.append(res)
+                print(f"[+] clean: {res}")
+    with open(a.out, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(clean))
+    print(f"[*] {len(clean)}/{len(candidates)} clean IPs saved to {a.out}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+PYTHON-->
+<!--POWERSHELL
+# ARAL URANIUM SNI scanner (PowerShell section) — paste into Windows PowerShell
+param(
+  [Parameter(Mandatory=$true)][string]$Domain,
+  [int]$Port = 443,
+  [string]$ListFile = "",
+  [int]$Count = 40,
+  [string]$Out = "clean.txt"
+)
+$ErrorActionPreference = "SilentlyContinue"
+if ($ListFile -and (Test-Path $ListFile)) {
+  $candidates = Get-Content $ListFile | Where-Object { $_.Trim() }
+} else {
+  $nets = @("104.16.0.0/13","104.24.0.0/14","172.64.0.0/13","162.158.0.0/15","108.162.192.0/18","141.101.64.0/18","190.93.240.0/20","188.114.96.0/20","197.234.240.0/22","198.41.128.0/17","173.245.48.0/20","103.21.244.0/22","103.22.200.0/22","103.31.4.0/22","131.0.72.0/22")
+  $pool = @()
+  foreach ($n in $nets) {
+    $parts = $n -split "/"
+    $base = ([ipaddress]$parts[0]).GetAddressBytes()
+    $b = [BitConverter]::ToUInt32(($base[3..0] + 0,0,0,0), 0)
+    $size = [math]::Pow(2, 32 - [int]$parts[1]) - 2
+    $step = [math]::Max(1, [math]::Floor($size / $Count) * $nets.Count / $Count / 8)
+    $i = 1
+    while ($i -le [math]::Ceiling($Count / $nets.Count) + 1) {
+      $ip = [ipaddress]([BitConverter]::GetBytes([uint32]($b + $i * $step)))[3..0]
+      $pool += $ip.IPAddressToString
+      $i++
+    }
+  }
+  $candidates = $pool | Get-Random -Count $Count
+}
+$clean = @()
+foreach ($ip in $candidates) {
+  $tcp = New-Object Net.Sockets.TcpClient
+  $iar = $tcp.BeginConnect($ip, $Port, $null, $null)
+  if ($iar.AsyncWaitHandle.WaitOne(3000) -and $tcp.Connected) {
+    $ssl = New-Object Net.Security.SslStream($tcp.GetStream(), $false, ({ $true }))
+    try {
+      $ssl.AuthenticateAsClient($Domain)
+      if ($ssl.IsAuthenticated) { $clean += $ip; Write-Host "[+] clean: $ip" -ForegroundColor Green }
+    } catch {}
+    $ssl.Dispose()
+  }
+  $tcp.Close()
+}
+$clean | Set-Content $Out
+Write-Host "[*] $($clean.Count) clean IPs saved to $Out" -ForegroundColor Yellow
+POWERSHELL-->
