@@ -1,6 +1,6 @@
 {
   "name": "aral-sulfur-panel",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "scripts": {
     "build": "node build.mjs",
     "dev": "node build.mjs && wrangler dev --local",
@@ -8,7 +8,7 @@
     "test": "node test.mjs",
     "shots": "node build.mjs && node shot.mjs"
   },
-  "description": "ARAL SULFUR v1.0.0 — calm glass edition of the  Free & open-source serverless VLESS, Trojan & Shadowsocks panel on Cloudflare Workers & Pages (Multi-user KV, per-user quotas & device limits, multi-location exits, pattern fragmentation, ECH, PWA, Private DoH, Telegram Web Proxy, Telegram Management Bot with auto-webhook, GitHub Self-Updater).",
+  "description": "ARAL SULFUR v1.1.1 — serverless VLESS, Trojan & Shadowsocks panel on Cloudflare Workers & Pages (Multi-user KV, per-user quotas & device limits, multi-location exits, pattern fragmentation, ECH, PWA, Private DoH, Telegram Web Proxy with Direct-DC engine + all-HTTPS-port links, Telegram Management Bot, GitHub Self-Updater). Copying and selling prohibited.",
   "devDependencies": {
     "@babel/generator": "^7.29.12",
     "@babel/parser": "^7.29.12",

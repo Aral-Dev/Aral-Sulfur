@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ARAL SULFUR v1.0.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (17/17 Suites)
+ * ARAL SULFUR v1.1.1 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (17/17 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -207,21 +207,21 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
     if (u.pathname === '/gh/repos/Aral-Dev/Aral-Sulfur/releases/latest') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
-        tag_name: 'v1.1.0',
-        html_url: 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.0',
+        tag_name: 'v1.2.0',
+        html_url: 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.1',
         body: '- Official test release from Aral-Dev/Aral-Sulfur',
         published_at: '2026-10-31T12:00:00Z',
         assets: [
           {
             name: 'worker-single-file.js',
-            browser_download_url: `${MOCK_BASE}/ghraw/Aral-Dev/Aral-Sulfur/v1.1.0/worker-single-file.js`,
+            browser_download_url: `${MOCK_BASE}/ghraw/Aral-Dev/Aral-Sulfur/v1.2.0/worker-single-file.js`,
           },
         ],
       }));
     }
     if (u.pathname === '/ghraw/Aral-Dev/Aral-Sulfur/main/package.json') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ name: 'aral', version: '1.0.0' })); // main branch matches installed
+      return res.end(JSON.stringify({ name: 'aral', version: '1.1.1' })); // main branch matches installed
     }
     if (u.pathname.endsWith('/worker-single-file.js')) {
       res.writeHead(200, { 'content-type': 'application/javascript' });
@@ -237,7 +237,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ ARAL SULFUR v1.0.0 Full Live Verification Suite (17/17) ═══');
+  console.log('═══ ARAL SULFUR v1.1.1 Full Live Verification Suite (17/17) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -283,7 +283,7 @@ async function main() {
 
     // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v3.0.0) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '1.0.0', 'Health version must be 1.0.0');
+    assert.equal(health.version, '1.1.1', 'Health version must be 1.1.1');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -316,7 +316,7 @@ async function main() {
     let cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '1.0.0');
+    assert.equal(boot.version, '1.1.1');
     assert.equal(boot.updater.repo, 'Aral-Dev/Aral-Sulfur', 'Hardcoded official GitHub repo must be Aral-Dev/Aral-Sulfur');
     assert.equal(boot.updater.repoUrl, 'https://github.com/Aral-Dev/Aral-Sulfur');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -343,12 +343,12 @@ async function main() {
     const announceHdr = rawSubRes.headers.get('announce') || '';
     assert(announceHdr.startsWith('base64:'), 'Subscription must include announce header');
     const decodedAnnounce = Buffer.from(announceHdr.slice(7), 'base64').toString('utf8');
-    assert(decodedAnnounce.includes('رایگان و متن‌باز'), 'Announce header must state free & non-commercial');
+    assert(decodedAnnounce.includes('فروش'), 'Announce header must state the resale prohibition');
     assert(!/\p{Extended_Pictographic}/u.test(decodedAnnounce), 'Announce header must have 0 emojis');
 
     const rawLines = (await rawSubRes.text()).trim().split('\n');
     const firstDecodedHash = decodeURIComponent(rawLines[0].split('#')[1] || '');
-    assert(firstDecodedHash.includes('رایگان و غیرقابل فروش'), 'Top URI line must state free & not for sale');
+    assert(firstDecodedHash.includes('ممنوع'), 'Top URI line must state the copy/sell prohibition');
     assert(!/\p{Extended_Pictographic}/u.test(firstDecodedHash), 'Top URI line must have 0 emojis');
 
     for (const p of [443, 8443, 2053, 2083, 2087, 2096]) {
@@ -426,6 +426,41 @@ async function main() {
       tgWs.on('error', reject);
     });
     console.log('✓ [6/16] Official Telegram Web Proxy -> HMAC Bridge 200 + Session Lease 200 + Lane WS 101 verified');
+
+    // ── TEST 6b: Multi-port Telegram proxy links (all 6 HTTPS ports, dd-padded) ──
+    const tgPorts = boot.tgProxy && Array.isArray(boot.tgProxy.ports) ? boot.tgProxy.ports : [];
+    assert.equal(tgPorts.length, 6, 'Bootstrap must expose all 6 HTTPS port proxy links');
+    assert(
+      tgPorts.every((p) => p.tgUrl.startsWith('tg://webproxy?') && p.secret.startsWith('dd') && p.secret.length === 34),
+      'Every port link must be a dd-padded tg://webproxy link'
+    );
+    assert(tgPorts.find((p) => p.port === 443).tgUrl.includes('&port=') === false, 'Port 443 link must omit the port param');
+    assert(tgPorts.find((p) => p.port === 2053).tgUrl.includes('&port=2053'), 'Port 2053 link must carry its port');
+    assert(new Set(tgPorts.map((p) => p.secret)).size === 6, 'Each port must have a distinct secret');
+
+    // Bridge capability minted for port 2053 (client signs host:port with the dd-padded secret)
+    const portInfo = tgPorts.find((p) => p.port === 2053);
+    const cap2053 = crypto
+      .createHmac('sha256', Buffer.from(portInfo.secret, 'hex'))
+      .update(`tdesktop-web-proxy-bridge-v1\n127.0.0.1:2053`)
+      .digest('base64url');
+    const bridge2053 = await (await fetch(`${BASE}/?bridge=${cap2053}`)).text();
+    const boot2053 = /boot="([A-Za-z0-9_-]{43})"/.exec(bridge2053);
+    assert(boot2053, 'Port-2053 bridge must accept the per-port capability');
+    const sess2053 = await fetch(`${BASE}/api/v1/session`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${boot2053[1]}`, 'content-type': 'application/octet-stream' },
+      body: new Uint8Array([0x10, 0, 0, 0, 0, 0, 0, 1, 1]),
+    });
+    assert.equal(sess2053.status, 200, 'Port-2053 session lease must be granted');
+    const laneTok2053 = sess2053.headers.get('x-session-token') || '';
+    await new Promise((resolve, reject) => {
+      const subproto = `tproxy-lane-v1.${laneTok2053}.1`;
+      const ws = new WebSocket(`ws://127.0.0.1:${PORT}/api/v1/ws`, subproto);
+      ws.on('open', () => { assert.equal(ws.protocol, subproto); ws.close(); resolve(); });
+      ws.on('error', reject);
+    });
+    console.log('✓ [6b/16] Multi-Port Telegram Proxy -> 6 dd-padded links + per-port bridge/session/lane chain verified');
 
     // ── TEST 7–12: Headless Chromium UI E2E Verification ──
     const browser = await chromium.launch();
@@ -542,17 +577,18 @@ async function main() {
     });
     assert(String(glassAudit.backdrop).includes('blur'), `Sulfur cards must be frosted glass, got: ${glassAudit.backdrop}`);
     assert(glassAudit.radius !== '0px', 'Cards must keep rounded corners');
-    assert.equal(glassAudit.navLabels.length, 4, 'Sulfur menu must expose exactly 4 simple sections');
+    assert.equal(glassAudit.navLabels.length, 5, 'Sulfur menu must expose exactly 5 simple sections');
     assert(glassAudit.navLabels.join(',').includes('خانه'), 'Menu must contain the Home (خانه) entry');
     assert(glassAudit.navLabels.join(',').includes('مشترکین'), 'Menu must contain the Subscribers (مشترکین) entry');
     assert(glassAudit.navLabels.join(',').includes('اتصال و شبکه'), 'Menu must contain the Network (اتصال و شبکه) entry');
     assert(glassAudit.navLabels.join(',').includes('تنظیمات'), 'Menu must contain the Settings (تنظیمات) entry');
+    assert(glassAudit.navLabels.join(',').includes('پروکسی تلگرام'), 'Menu must contain the Telegram Proxy entry');
     assert.equal(glassAudit.activeTab, 'home', 'Home tab must be active after login');
     assert(glassAudit.activeBg.includes('gradient'), 'Active tab must carry the honey gradient');
     assert(/^\d{2}:\d{2}:\d{2}$/.test(glassAudit.clockText), `Digital clock must render HH:MM:SS, got: ${glassAudit.clockText}`);
-    assert(glassAudit.clockMono.includes('JBM'), 'Digital clock must use the calm mono typeface');
+    assert(/Bodoni Moda/i.test(glassAudit.clockMono), 'Digital clock must use the Bodoni Moda typeface');
     assert.equal(glassAudit.dir, 'rtl', 'Persian panel must stay RTL');
-    console.log(`✓ [9/16] Sulfur Glass Design -> frosted cards, 4-menu nav, honey active tab, live clock ${glassAudit.clockText}`);
+    console.log(`✓ [9/16] Sulfur Glass Design -> frosted cards, 5-menu nav, honey active tab, live clock ${glassAudit.clockText}`);
 
     // ── TEST 10: Dynamic Theme-Native Monochrome Speed/RTT & Subscriber Usage Chart ──
     await page.click('#btn-speed-burst');
@@ -756,9 +792,9 @@ async function main() {
       badgeTxt: document.getElementById('gh-status-badge')?.textContent || '',
       dlHref: document.getElementById('gh-dl-link')?.href || '',
     }));
-    assert.equal(ghUi.remVer, 'V1.1.0', `Expected V1.1.0 from mock GitHub release, got: ${ghUi.remVer}`);
+    assert.equal(ghUi.remVer, 'V1.2.0', `Expected V1.2.0 from mock GitHub release, got: ${ghUi.remVer}`);
     assert(ghUi.badgeTxt.includes('نسخهٔ جدید') || ghUi.badgeTxt.includes('UPDATE'), `Update badge must announce the new release, got: ${ghUi.badgeTxt}`);
-    assert.equal(ghUi.dlHref, 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.0', 'Manual download link must follow the mock release');
+    assert.equal(ghUi.dlHref, 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.1', 'Manual download link must follow the mock release');
 
     // Fill the Cloudflare token form inside the disclosure and self-apply the update.
     await page.evaluate(() => { document.getElementById('gh-apply-box').open = true; });
@@ -771,7 +807,7 @@ async function main() {
     assert(upload.bodyText.includes('"kv_ns_demo_123"'), 'Self-updater MUST preserve existing KV namespace bindings');
     assert(upload.bodyText.includes('"keep_bindings":["secret_text","secret_key"]'), 'Self-updater MUST preserve existing secrets');
     assert(upload.byteLength > 200000, 'Uploaded Worker bundle must contain full compiled script');
-    console.log(`✓ [15/16] GitHub Self-Updater (Aral-Dev/Aral-Sulfur) -> V1.1.0 detected, in-panel deploy preserved KV + secrets`);
+    console.log(`✓ [15/16] GitHub Self-Updater (Aral-Dev/Aral-Sulfur) -> V1.2.0 detected, in-panel deploy preserved KV + secrets`);
 
 
     // ── TEST 16: Server-Side Family Filter — tunnel gate + private DoH Family upgrade ──
@@ -968,7 +1004,7 @@ async function main() {
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 17/17 ARAL SULFUR v1.0.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 17/17 ARAL SULFUR v1.1.1 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));

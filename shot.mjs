@@ -16,6 +16,14 @@ const MOCK_PORT = 19720 + Math.floor(Math.random() * 200);
 const BASE = `http://127.0.0.1:${PORT}`;
 const MOCK_BASE = `http://127.0.0.1:${MOCK_PORT}`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function safeClick(page, selector, timeout = 2500) {
+  try {
+    await page.click(selector, { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const mockSrv = http.createServer((req, res) => {
   const u = new URL(req.url, MOCK_BASE);
@@ -151,18 +159,17 @@ try {
   // Login has no sponsor; the animated Telegram dock appears only inside the admin panel
   await page.waitForSelector('#v-login:not([hidden])');
   await page.screenshot({ path: `${OUT_DIR}/08-login-light-fa.png`, fullPage: true });
-  await page.click('#lang-login');
-  await page.click('#v-login .t-pick[data-th="dark"]');
+  await safeClick(page, '#lang-login');
+  await safeClick(page, '#v-login .t-pick[data-th="dark"]');
   await page.waitForTimeout(240);
   await page.screenshot({ path: `${OUT_DIR}/09-login-dark-en.png`, fullPage: true });
-  await page.click('#lang');
-  await page.click('#v-login .t-pick[data-th="light"]');
+  await safeClick(page, '#v-login .t-pick[data-th="light"]');
 
   // Login
   await page.fill('#login-pass', 'DemoPassword2026!');
-  await page.click('#f-login button[type="submit"]');
+  await safeClick(page, '#f-login button[type="submit"]');
   await page.waitForSelector('#v-admin:not([hidden])');
-  await page.click('#btn-speed-burst');
+  await safeClick(page, '#btn-speed-burst');
   await page.waitForTimeout(900);
   await page.evaluate(() => { const t = document.getElementById('toast'); if (t) t.hidden = true; });
 
@@ -170,43 +177,44 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/01-dashboard-light-fa.png`, fullPage: true });
 
   // 3) Dashboard (EN Dark) — IP Blurred + Subscriber Usage Hatched Bar Chart (12.4 GB vs 0 B)!
-  await page.click('#lang');
-  await page.click('#v-admin .t-pick[data-th="dark"]');
-  await page.click('#btn-ip-blur');
-  await page.click('#chart-mode-usage');
+  await safeClick(page, '#lang');
+  await safeClick(page, '#v-admin .t-pick[data-th="dark"]');
+  await safeClick(page, '#btn-ip-blur');
+  await safeClick(page, '#chart-mode-usage');
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT_DIR}/02-dashboard-dark-en.png`, fullPage: true });
 
   // Restore FA Light & capture the simple Subscribers ledger
-  await page.click('#lang');
-  await page.click('#v-admin .t-pick[data-th="light"]');
-  await page.click('#btn-ip-blur');
+  await safeClick(page, '#lang');
+  await safeClick(page, '#v-admin .t-pick[data-th="light"]');
+  await safeClick(page, '#btn-ip-blur');
 
   // Simple Subscribers ledger (`07-users-ledger.png`)
-  await page.click('.tab-btn[data-tab="users"]');
+  await safeClick(page, '.tab-btn[data-tab="users"]');
   await page.waitForSelector('#pane-users:not([hidden])');
   await page.waitForTimeout(350);
   await page.screenshot({ path: `${OUT_DIR}/07-users-ledger.png`, fullPage: true });
 
   // Simple Network tab (`03-network.png`) — protocols, ports & clean IPs
-  await page.click('.tab-btn[data-tab="net"]');
+  await safeClick(page, '.tab-btn[data-tab="net"]');
   await page.waitForSelector('#pane-net:not([hidden])');
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT_DIR}/03-network.png`, fullPage: true });
 
-  // 4) Subscriber Press Pass (/sub/<token>)
-  await page.click('.tab-btn[data-tab="home"]');
+  // 3b) Telegram Proxy tab (all-ports grid + manual entry)
+  await safeClick(page, '.tab-btn[data-tab="tg"]');
+  await page.waitForTimeout(450);
+  await page.screenshot({ path: `${OUT_DIR}/10-telegram-proxy.png`, fullPage: true });
 
-
   // 4) Subscriber Press Pass (/sub/<token>)
-  await page.click('.tab-btn[data-tab="sub"]');
+  await safeClick(page, '.tab-btn[data-tab="home"]');
   const subHref = await page.getAttribute('#open-pass', 'href');
   const subToken = subHref.split('/sub/')[1];
 
   const subPage = await context.newPage();
   await subPage.goto(`${BASE}/sub/${subToken}`, { waitUntil: 'networkidle' });
-  await subPage.click('#sub-free-ok');
-  await page.waitForTimeout(350);
+  await safeClick(subPage, '#sub-free-ok');
+  await page.waitForTimeout(600);
   await subPage.screenshot({ path: `${OUT_DIR}/04-subscriber-press-pass.png`, fullPage: true });
 
   // 5) Private DoH Guide (/dns-query/<token>)
@@ -216,7 +224,7 @@ try {
   await dohPage.screenshot({ path: `${OUT_DIR}/05-private-doh-guide.png`, fullPage: true });
 
   await browser.close();
-  console.log('✓ Generated all 9 high-resolution Sulfur screenshots in docs/screenshots/');
+  console.log('✓ Generated all 10 high-resolution Sulfur screenshots in docs/screenshots/');
 } catch (err) {
   console.error('SHOT FAILED:', err);
   proc.kill('SIGTERM');
