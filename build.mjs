@@ -178,7 +178,10 @@ for (const f of FONTS) {
   const slug = f.key.toLowerCase().replace(/^f_/, 'f-').replaceAll('_', '-');
   const fileName = `${slug}.woff2`;
   brandFiles[fileName] = subsetFont(f.file, f.text === 'fa' ? subsets.fa : subsets.latin);
-  fontVars[f.key] = `/brand/${fileName}`;
+  /* v1.2: version-stamped brand URLs — a new release busts the week-long immutable
+     browser cache instantly (the /brand/ route ignores the query string), so the
+     emblem can never go stale on the status page again. */
+  fontVars[f.key] = `/brand/${fileName}?v=${encodeURIComponent(VERSION)}`;
 }
 for (const [fileName, srcPath] of [
   ['emblem-192.png', 'src/ui/assets/logo-192.png'],
@@ -212,8 +215,8 @@ for (const [k, v] of Object.entries(fontVars)) {
   rawStyle = rawStyle.replaceAll(`{{${k}}}`, v);
 }
 rawStyle = rawStyle
-  .replaceAll('{{LOGO_192}}', '/brand/emblem-192.png')
-  .replaceAll('{{LOGO_FULL}}', '/brand/lockup-320.png');
+  .replaceAll('{{LOGO_192}}', `/brand/emblem-192.png?v=${encodeURIComponent(VERSION)}`)
+  .replaceAll('{{LOGO_FULL}}', `/brand/lockup-320.png?v=${encodeURIComponent(VERSION)}`);
 const minCss = (await esbuild.transform(rawStyle, { loader: 'css', minify: true })).code.trim();
 /* Standalone offline preview keeps everything inline (fonts + logos as data URIs). */
 const previewDataUris = {};

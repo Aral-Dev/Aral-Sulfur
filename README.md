@@ -1,11 +1,11 @@
 <div align="center">
 
-# ARAL SULFUR · V1.1 — CALM GLASS EDITION
+# ARAL SULFUR · V1.2 — CALM GLASS EDITION
 
 **پنل ساده و آرامِ مدیریت اشتراک VLESS، Trojan و Shadowsocks و پروکسی تلگرام روی شبکهٔ ابری کلادفلر — با همان هستهٔ اثبات‌شده، در بدنه‌ای شیشه‌ای و دوستانه**
 *The simple & calm serverless VLESS, Trojan & Shadowsocks panel with the Telegram Web Proxy on Cloudflare Workers & Pages — same battle-tested core, wrapped in soft honey glass*
 
-![Version](https://img.shields.io/badge/Version-1.1.1_SULFUR-d9a03a?style=flat-square) ![Runtime](https://img.shields.io/badge/Cloudflare-Workers%20%26%20Pages-1D2117?style=flat-square) ![Theme](https://img.shields.io/badge/Theme-Sulfur%20Calm%20Glass-E5EB70?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.2.0_SULFUR-d9a03a?style=flat-square) ![Runtime](https://img.shields.io/badge/Cloudflare-Workers%20%26%20Pages-1D2117?style=flat-square) ![Theme](https://img.shields.io/badge/Theme-Sulfur%20Calm%20Glass-E5EB70?style=flat-square)
 
 [کانال رسمی / Official Channel — Telegram](https://t.me/AralDev)
 
@@ -13,12 +13,14 @@
 
 ---
 
-> **V1.1.1 — وصلهٔ سرعت و نشان نو**
-> · رفع کامل کندی/انجماد صفحهٔ خانه (نشت حلقهٔ رندر نمودار — حالا یک زنجیرهٔ ~۳۰fps با توقف کامل روی تب‌های دیگر)
-> · نشان (لوگو) جدید «قلهٔ سولفور»: کاشی تیره، بلور شش‌ضلعی، Aٔ دوقله با جرقهٔ سولفور
-> · سبک‌تر شدن دارایی‌های برند (~۲ برابر) بدون هیچ تغییری در رفتار پنل
+> **V1.2.0 — باکس تحویل دوپلتفرمی + ثبت آی‌پی**
+> · **بات تلگرام و بله** با ست‌کردن کاملاً خودکار وبهوک: منوی شیشه‌ای رنگی «دریافت کانفیگ / دریافت پروکسی»، ارسال کانفیگ‌ها به‌صورت رندوم ۵تا۵تا با دکمهٔ «۵ تای بعدی»، منوی پروکسی با اتصال مستقیم تلگرام و دکمهٔ برگشت در همه‌جا
+> · **ثبت آی‌پی (پین)**: قفل کردن کانفیگ‌های کل پنل یا هر مشترک روی یک آی‌پی دلخواه + تست زندهٔ پینگ و لوکیشن دقیق با همان زنجیرهٔ چندسرویسیِ ARAL IP Location
+> · **صفحهٔ خانهٔ نو**: ساعت بزرگ در مرکز، تقویم شمسی و مناسب‌های روز (شمسی + قمری) در دو بال کنارش
+> · **لینک‌های اشتراک کشویی**: برای هر مشترک یک ردیف بزرگ که با لمس باز می‌شود + دسترسی سریع «کپی ساب عادی» و «QR عادی» در هر ردیف و در فهرست مشترکین
+> · رفع کامل سرریز افقی صفحهٔ وضعیت در گوشی، نشانِ همیشه‌تازه (URLهای برند نسخه‌دار)، جداسازی بهتر کارت‌ها در تم روشن و جزئیات مرتب‌تر در همه‌جا
 >
-> **V1.1.1 — Speed & emblem patch**: home tab freeze eliminated (chart render-loop leak), new "Sulfur Summit" emblem, ~2× lighter brand assets. Zero behavior changes.
+> **V1.2.0 — Dual-platform delivery box + IP pin**: fully automatic Telegram AND Bale bots (colored glass menus, 5-by-5 random config delivery, one-tap proxy deep-links, back buttons everywhere), panel-wide or per-subscriber IP pinning with live ping+location test, home clock trio with Persian calendar & daily occasions, big expandable per-subscriber subscription rows, quick copy/QR actions, mobile status-page overflow fixed, version-stamped brand URLs (emblem can never go stale), clearer light-theme card separation.
 
 ---
 
@@ -38,11 +40,11 @@
 
 | منو | چه چیزی داخلش است |
 | --- | --- |
-| **خانه** | نمودار زندهٔ سرعت و پینگ + نمودار مصرف مشترکین، ساعت دیجیتالی، وضعیت لحظه‌ای و لینک‌های اشتراک کاربر مدیر و پیش‌فرض (کپی + QR + صفحهٔ وضعیت) |
+| **خانه** | نمودار زندهٔ سرعت و پینگ + مصرف مشترکین، ساعت مرکزی با تقویم شمسی و مناسب‌های روز، لینک‌های اشتراک کشویی هر مشترک (کپی + QR + صفحهٔ وضعیت) |
 | **مشترکین** | ساخت/ویرایش/توقف/ریست/حذف مشترک با فرم ساده: نام، حجم، اعتبار، پروتکل‌ها و **آی‌پی ثابت یا چرخشی** به انتخاب شما + عملیات گروهی |
-| **اتصال و شبکه** | انتخاب پروتکل (VLESS / Trojan / Shadowsocks)، پورت‌های TLS و غیر TLS، آی‌پی تمیز، دامنه‌ها، پروکسی خروجی و تنظیمات پیشرفتهٔ اتصال |
+| **اتصال و شبکه** | پروتکل‌ها و پورت‌ها، آی‌پی تمیز، دامنه‌ها، **ثبت آی‌پی (پین) با تست پینگ و لوکیشن**، پروکسی خروجی و تنظیمات پیشرفته |
 | **پروکسی تلگرام** | همهٔ پورت‌های HTTPS (443، 2053، 2083، 2087، 2096، 8443) با سکرت اختصاصی هر پورت — اتصال یک‌ضرب، کپی لینک، QR و ورود دستی + موتور Direct-DC با فالبک KWS |
-| **تنظیمات** | تم روشن/تیره، زبان، تغییر رمز، قطع اضطراری، پشتیبان‌گیری JSON، **بروزرسانی پنل از همین ریپو**، لینک‌های سازنده و ستاره‌دادن به پروژه |
+| **تنظیمات** | تم روشن/تیره، زبان، **ست کردن بات تلگرام و بله (وبهوک خودکار + ویرایش/حذف)**، تغییر رمز، قطع اضطراری، پشتیبان JSON، بروزرسانی پنل، لینک‌های سازنده و ستاره |
 
 ## رنگ و حس / Palette & Feel
 
@@ -65,7 +67,8 @@
 - **لوکیشن‌های خروجی چندگانه (تا ۱۵)** و تعویض خودکار پروکسی خراب
 - **چرخش خودکار IP تمیز** برای هر مشترک + **IP ثابت دلخواه**
 - سهمیهٔ اتصال، حد دستگاه همزمان، ریست خودکار حجم و شروع اعتبار از اولین اتصال
-- مسدودسازی بزرگسال/تبلیغات، بات تلگرام، پروکسی رسمی تلگرام، DoH خصوصی
+- مسدودسازی بزرگسال/تبلیغات، **بات تحویل دوپلتفرمی (تلگرام + بله) با منوی شیشه‌ای رنگی**، پروکسی رسمی تلگرام، DoH خصوصی
+- **ثبت آی‌پی سراسری یا اختصاصی هر مشترک** (پین کامل کانفیگ‌ها روی یک آی‌پی) + تست پینگ و لوکیشن چندسرویسی
 - اشتراک چندقالبی (Base64، Xray، Sing-box، Clash) + صفحهٔ کارت مشترک با صحنهٔ قلهٔ آرال
 - **PWA**، تایپوگرافی Vazirmatn (فارسی) + Bodoni Moda (انگلیسی) + JetBrains Mono (داده)، دوزبانه (فارسی/انگلیسی)
 - امنیت PBKDF2-HMAC + بازیابی رمز با توکن کلادفلر

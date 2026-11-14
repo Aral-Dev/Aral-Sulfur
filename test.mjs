@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ARAL SULFUR v1.1.1 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (17/17 Suites)
+ * ARAL SULFUR v1.2.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (18/18 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -135,6 +135,27 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
       return res.end(fs.readFileSync(new URL('./fixtures/cloudflare-ips.json', import.meta.url)));
     }
 
+    // ── v1.2: Telegram + Bale Bot API mocks (recording every outbound call) ──
+    const botApi = u.pathname.match(/^\/(tg|bl)\/bot([^/]+)\/(getMe|setWebhook|deleteWebhook|sendMessage|editMessageText|answerCallbackQuery|getWebhookInfo|sendPhoto)$/);
+    if (botApi) {
+      const [, platform, token, method] = botApi;
+      stateRecorder.botCalls = stateRecorder.botCalls || [];
+      const entry = { platform, token, method, body: JSON.parse(bodyBuf.toString('utf8') || '{}') };
+      stateRecorder.botCalls.push(entry);
+      if (method === 'getMe') {
+        return res.end(JSON.stringify({ ok: true, result: { id: platform === 'bl' ? 991001 : 77001, username: platform === 'bl' ? 'aral_bale_bot' : 'aral_test_bot', first_name: platform === 'bl' ? 'Aral Bale' : 'Aral Test' } }));
+      }
+      if (method === 'setWebhook') {
+        stateRecorder.webhooks = stateRecorder.webhooks || [];
+        stateRecorder.webhooks.push({ platform, url: entry.body.url, secret: entry.body.secret_token || '' });
+        return res.end(JSON.stringify({ ok: true, result: true, description: '' }));
+      }
+      if (method === 'deleteWebhook' || method === 'getWebhookInfo') {
+        return res.end(JSON.stringify({ ok: true, result: method === 'deleteWebhook' ? true : { url: entry.body.url || '', pending_update_count: 0 }, description: '' }));
+      }
+      return res.end(JSON.stringify({ ok: true, result: { message_id: Math.floor(Math.random() * 100000) }, description: '' }));
+    }
+
     // Cloudflare REST + GraphQL Mock (strictly enforces Bearer token like real api.cloudflare.com)
     if (u.pathname.startsWith('/cf/')) {
       if (auth !== 'Bearer cf_valid_test_token_1234567890') {
@@ -207,21 +228,21 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
     if (u.pathname === '/gh/repos/Aral-Dev/Aral-Sulfur/releases/latest') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
-        tag_name: 'v1.2.0',
-        html_url: 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.1',
+        tag_name: 'v1.3.0',
+        html_url: 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.3.0',
         body: '- Official test release from Aral-Dev/Aral-Sulfur',
         published_at: '2026-10-31T12:00:00Z',
         assets: [
           {
             name: 'worker-single-file.js',
-            browser_download_url: `${MOCK_BASE}/ghraw/Aral-Dev/Aral-Sulfur/v1.2.0/worker-single-file.js`,
+            browser_download_url: `${MOCK_BASE}/ghraw/Aral-Dev/Aral-Sulfur/v1.3.0/worker-single-file.js`,
           },
         ],
       }));
     }
     if (u.pathname === '/ghraw/Aral-Dev/Aral-Sulfur/main/package.json') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ name: 'aral', version: '1.1.1' })); // main branch matches installed
+      return res.end(JSON.stringify({ name: 'aral', version: '1.2.0' })); // main branch matches installed
     }
     if (u.pathname.endsWith('/worker-single-file.js')) {
       res.writeHead(200, { 'content-type': 'application/javascript' });
@@ -237,7 +258,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ ARAL SULFUR v1.1.1 Full Live Verification Suite (17/17) ═══');
+  console.log('═══ ARAL SULFUR v1.2.0 Full Live Verification Suite (18/18) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -262,6 +283,10 @@ async function main() {
       `NL_GH_RAW_BASE:${MOCK_BASE}/ghraw`,
       '--var',
       'NL_DISABLE_POOL_PROVISION:1',
+      '--var',
+      `NL_TG_API_BASE:${MOCK_BASE}/tg`,
+      '--var',
+      `NL_BALE_API_BASE:${MOCK_BASE}/bl`,
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] }
   );
@@ -283,7 +308,7 @@ async function main() {
 
     // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v3.0.0) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '1.1.1', 'Health version must be 1.1.1');
+    assert.equal(health.version, '1.2.0', 'Health version must be 1.2.0');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -316,7 +341,7 @@ async function main() {
     let cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '1.1.1');
+    assert.equal(boot.version, '1.2.0');
     assert.equal(boot.updater.repo, 'Aral-Dev/Aral-Sulfur', 'Hardcoded official GitHub repo must be Aral-Dev/Aral-Sulfur');
     assert.equal(boot.updater.repoUrl, 'https://github.com/Aral-Dev/Aral-Sulfur');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -726,11 +751,20 @@ async function main() {
     assert(sinaCard.bw.startsWith('0 B /'), `New user SinA must start at 0 B, got: ${sinaCard.bw}`);
     assert.equal(sinaCard.barWidth, '0%', `New 0-byte user progress bar MUST be 0%, got: ${sinaCard.barWidth}`);
 
-    // Home tab status chips must also stay in sync for the freshly selected user.
+    // Home tab subscription accordion must also stay in sync with every subscriber.
     await page.click('.tab-btn[data-tab="home"]');
     await page.waitForSelector('#pane-home:not([hidden])');
-    const homeStatusTxt = await page.evaluate(() => document.getElementById('u-status-cell')?.innerText || '');
-    assert(homeStatusTxt.length > 0, 'Home tab must render the selected subscriber status chips');
+    const homeAcc = await page.evaluate(() => ({
+      items: document.querySelectorAll('#sub-acc .acc-item').length,
+      firstOpen: !!document.querySelector('#sub-acc .acc-item.open'),
+      tiles: document.querySelectorAll('#sub-acc .link-tile').length,
+      quickCopy: !!document.querySelector('#sub-acc [data-qsub]'),
+      quickQr: !!document.querySelector('#sub-acc [data-qr]'),
+    }));
+    assert(homeAcc.items >= 2, `Subscription accordion must list every subscriber, got ${homeAcc.items}`);
+    assert(homeAcc.firstOpen, 'First subscriber accordion row must start expanded');
+    assert(homeAcc.tiles >= 5, `Each expanded row must expose all 5 sub tiles, got ${homeAcc.tiles}`);
+    assert(homeAcc.quickCopy && homeAcc.quickQr, 'Accordion must expose quick copy + quick QR actions');
     console.log(`✓ [13/16] New User Isolation & Progress Bar Fix -> SinA (${sinaCard.bw}) bar=${sinaCard.barWidth}, duplicate UUID blocked`);
 
     // ── TEST 14: Settings Tab — password change, kill switch & JSON backup ──
@@ -792,9 +826,9 @@ async function main() {
       badgeTxt: document.getElementById('gh-status-badge')?.textContent || '',
       dlHref: document.getElementById('gh-dl-link')?.href || '',
     }));
-    assert.equal(ghUi.remVer, 'V1.2.0', `Expected V1.2.0 from mock GitHub release, got: ${ghUi.remVer}`);
+    assert.equal(ghUi.remVer, 'V1.3.0', `Expected V1.3.0 from mock GitHub release, got: ${ghUi.remVer}`);
     assert(ghUi.badgeTxt.includes('نسخهٔ جدید') || ghUi.badgeTxt.includes('UPDATE'), `Update badge must announce the new release, got: ${ghUi.badgeTxt}`);
-    assert.equal(ghUi.dlHref, 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.1.1', 'Manual download link must follow the mock release');
+    assert.equal(ghUi.dlHref, 'https://github.com/Aral-Dev/Aral-Sulfur/releases/tag/v1.3.0', 'Manual download link must follow the mock release');
 
     // Fill the Cloudflare token form inside the disclosure and self-apply the update.
     await page.evaluate(() => { document.getElementById('gh-apply-box').open = true; });
@@ -807,7 +841,7 @@ async function main() {
     assert(upload.bodyText.includes('"kv_ns_demo_123"'), 'Self-updater MUST preserve existing KV namespace bindings');
     assert(upload.bodyText.includes('"keep_bindings":["secret_text","secret_key"]'), 'Self-updater MUST preserve existing secrets');
     assert(upload.byteLength > 200000, 'Uploaded Worker bundle must contain full compiled script');
-    console.log(`✓ [15/16] GitHub Self-Updater (Aral-Dev/Aral-Sulfur) -> V1.2.0 detected, in-panel deploy preserved KV + secrets`);
+    console.log(`✓ [15/16] GitHub Self-Updater (Aral-Dev/Aral-Sulfur) -> V1.3.0 detected, in-panel deploy preserved KV + secrets`);
 
 
     // ── TEST 16: Server-Side Family Filter — tunnel gate + private DoH Family upgrade ──
@@ -1001,10 +1035,160 @@ async function main() {
     assert(reJson.settings && typeof reJson.settings.wsPath === 'string', 'settings must survive the recovery cycle');
     console.log('✓ [17/17] ULTRA v4.2 Extended -> feed alias, auto-update toggle, restart-core, pool sampling, per-user ports/poolType/req-reset, lifetime+deleted accounting, live heartbeat kill, CF-token recovery — ALL VERIFIED!');
 
+    // ── TEST 18: v1.2 Dual-Platform Delivery Bot (Telegram + Bale) — auto webhook,
+    //    colored glass menus, 5-by-5 random config delivery, proxy menu, back buttons ──
+    mockRecorder.botCalls = [];
+    mockRecorder.webhooks = [];
+    const TG_TOKEN = '770011122:AAHtestTokenAralSulfurDeliveryBot1';
+    const BL_TOKEN = '550011122:AAHtestBaleAralSulfurDeliveryBot22';
+    const ADMIN_ID = 111222333;
+
+    /* Test 17 already re-set-up the panel with a new password — grab a fresh session for the bot tests */
+    const botLogin = await fetch(`${BASE}/api/login`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password: 'NewAdminPassword25!' }),
+    });
+    assert.equal(botLogin.status, 200, 'bot-test login with the post-recovery password must succeed');
+    cookie = botLogin.headers.get('set-cookie').split(';')[0];
+
+    const tgSave = await (await fetch(`${BASE}/api/tgbot/save`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ token: TG_TOKEN, adminIds: String(ADMIN_ID) }),
+    })).json();
+    assert(tgSave.ok, `Telegram bot save must succeed, got: ${tgSave.error}`);
+    assert(tgSave.bot && tgSave.bot.username === 'aral_test_bot', 'getMe must run through the mock');
+    const tgHook = (tgSave.payload?.tgBot?.hookPath || '');
+    assert(tgHook.startsWith('/api/tgbot/hook/'), `Hook path must be returned, got: ${tgHook}`);
+    assert(mockRecorder.webhooks.some((w) => w.platform === 'tg' && w.url.endsWith(tgHook) && w.secret === tgHook.split('/').pop()),
+      'Telegram setWebhook must carry the secret_token + hook URL');
+    const botHookSecret = tgHook.split('/').pop();
+
+    const blSave = await (await fetch(`${BASE}/api/blbot/save`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ token: BL_TOKEN, adminIds: String(ADMIN_ID) }),
+    })).json();
+    assert(blSave.ok, `Bale bot save must succeed, got: ${blSave.error}`);
+    const blHook = (blSave.payload?.blBot?.hookPath || '');
+    assert(blHook.startsWith('/api/blbot/hook/'), `Bale hook path must be returned, got: ${blHook}`);
+    assert(mockRecorder.webhooks.some((w) => w.platform === 'bl' && w.url.endsWith(blHook) && !w.secret),
+      'Bale setWebhook must be sent WITHOUT secret_token (unsupported there)');
+    const blSecret = blHook.split('/').pop();
+
+    const postUpdate = async (secret, update, header = {}) => {
+      const r = await fetch(`${BASE}/api/tgbot/hook/${secret}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(secret === blSecret ? { 'x-bale-hint': '1' } : { 'x-telegram-bot-api-secret-token': secret }), ...header },
+        body: JSON.stringify(update),
+      });
+      return { status: r.status, text: await r.text() };
+    };
+    const lastBotCall = (platform, method, contains, field = 'text') => {
+      const hits = (mockRecorder.botCalls || []).filter((c) => c.platform === platform && c.method === method);
+      return hits.length && JSON.stringify(hits[hits.length - 1].body).includes(contains);
+    };
+    const lastBody = (platform, method) => {
+      const hits = (mockRecorder.botCalls || []).filter((c) => c.platform === platform && c.method === method);
+      return hits.length ? hits[hits.length - 1].body : null;
+    };
+
+    // Wrong secret must be rejected before any bot traffic
+    mockRecorder.botCalls = [];
+    const badHook = await postUpdate('deadbeefdeadbeefdeadbeefdeadbeef', { message: { chat: { id: ADMIN_ID }, from: { id: ADMIN_ID }, text: '/start' } });
+    assert.equal(badHook.status, 403, 'Wrong hook secret must 403');
+    assert.equal((mockRecorder.botCalls || []).length, 0, 'No bot API traffic on bad secret');
+
+    // /start → the two colored glass options
+    mockRecorder.botCalls = [];
+    let up = await postUpdate(botHookSecret, { message: { chat: { id: ADMIN_ID }, from: { id: ADMIN_ID, first_name: 'Aral' }, text: '/start' } });
+    assert.equal(up.status, 200, 'start update must be accepted');
+    let startMsg = lastBody('tg', 'sendMessage');
+    assert(startMsg && startMsg.text.includes('ARAL SULFUR'), '/start must greet with the panel brand');
+    let startKb = startMsg.reply_markup.inline_keyboard;
+    assert(startKb[0][0].text.includes('دریافت کانفیگ') && startKb[0][1].text.includes('دریافت پروکسی'), '/start must show the two glass options');
+    assert(startKb[0][0].callback_data === 'cfg:0' && startKb[0][1].callback_data === 'prx:0', 'Glass options must carry cfg/prx callbacks');
+    assert(startKb[0][0].style === 'success' && startKb[0][1].style === 'primary', 'Glass options must be colored (success + primary)');
+
+    // دریافت کانفیگ → subscriber picker
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { callback_query: { id: 'cq1', from: { id: ADMIN_ID }, message: { message_id: 10, chat: { id: ADMIN_ID } }, data: 'cfg:0' } });
+    let cfgMenu = lastBody('tg', 'editMessageText');
+    assert(cfgMenu && cfgMenu.text.includes('کدام مشترک'), 'Subscriber picker must appear');
+    const firstUserBtn = cfgMenu.reply_markup.inline_keyboard.flat().find((b) => b.callback_data && b.callback_data.startsWith('cfu:'));
+    assert(firstUserBtn, 'A cfu: button must exist for the first subscriber');
+
+    // Tap subscriber → first random 5 configs (copyable) + ۵ تای بعدی
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { callback_query: { id: 'cq2', from: { id: ADMIN_ID }, message: { message_id: 11, chat: { id: ADMIN_ID } }, data: firstUserBtn.callback_data } });
+    let chunkMsg = lastBody('tg', 'sendMessage');
+    assert(chunkMsg && chunkMsg.text.includes('<code>vless://'), 'Configs must arrive as copyable <code> blocks');
+    const codeCount = (chunkMsg.text.match(/<code>/g) || []).length;
+    assert(codeCount === 5, `Exactly 5 configs must ship per message, got ${codeCount}`);
+    assert(!chunkMsg.text.includes('00000000-0000-0000-0000-000000000000@127.0.0.1'), 'Watermark pseudo-nodes must be filtered out');
+    let nextBtn = chunkMsg.reply_markup.inline_keyboard.flat().find((b) => b.callback_data && b.callback_data.startsWith('cfn:'));
+    assert(nextBtn && nextBtn.text.includes('۵ تای بعدی'), 'A colored ۵ تای بعدی glass button must follow');
+
+    // ۵ تای بعدی → the next chunk continues the same seeded order
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { callback_query: { id: 'cq3', from: { id: ADMIN_ID }, message: { message_id: 12, chat: { id: ADMIN_ID } }, data: nextBtn.callback_data } });
+    let chunk2 = lastBody('tg', 'sendMessage');
+    assert(chunk2 && /— 6 تا 10 از /.test(chunk2.text), `Second chunk must continue numbering (6 تا 10), got: ${(chunk2 || {}).text}`);
+    assert(chunk2.reply_markup.inline_keyboard.flat().some((b) => b.callback_data === 'menu:0' || (b.callback_data || '').startsWith('cfg:')), 'Back button must exist on chunk 2');
+
+    // دریافت پروکسی → glass URL buttons straight into Telegram connect
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { callback_query: { id: 'cq4', from: { id: ADMIN_ID }, message: { message_id: 13, chat: { id: ADMIN_ID } }, data: 'prx:0' } });
+    let prxMenu = lastBody('tg', 'editMessageText');
+    assert(prxMenu && prxMenu.text.includes('دریافت پروکسی'), 'Proxy menu must appear');
+    const urlBtns = (prxMenu.reply_markup.inline_keyboard || []).flat().filter((b) => b.url);
+    assert(urlBtns.length >= 6, `Every proxy port needs a URL connect button, got ${urlBtns.length}`);
+    assert(urlBtns.every((b) => b.url.startsWith('tg://webproxy?') || b.url.startsWith('https://t.me/webproxy?')), 'Proxy buttons must deep-link Telegram');
+    assert(urlBtns.some((b) => b.style === 'success'), 'Default port button must be green (success)');
+
+    // Back → main menu everywhere
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { callback_query: { id: 'cq5', from: { id: ADMIN_ID }, message: { message_id: 14, chat: { id: ADMIN_ID } }, data: 'menu:0' } });
+    let backMenu = lastBody('tg', 'editMessageText');
+    assert(backMenu && backMenu.reply_markup.inline_keyboard[0][0].text.includes('دریافت کانفیگ'), 'menu: must return to the two-option home');
+
+    // Non-admin must be refused
+    mockRecorder.botCalls = [];
+    await postUpdate(botHookSecret, { message: { chat: { id: 999 }, from: { id: 999 }, text: '/start' } });
+    let refused = lastBody('tg', 'sendMessage');
+    assert(refused && refused.text.includes('دسترسی محدود'), 'Non-admins must be politely refused');
+
+    // Bale platform: /start through its own hook (no secret header involved)
+    mockRecorder.botCalls = [];
+    let blUp = await fetch(`${BASE}/api/blbot/hook/${blSecret}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: { chat: { id: ADMIN_ID }, from: { id: ADMIN_ID, first_name: 'Aral' }, text: '/start' } }),
+    });
+    assert.equal(blUp.status, 200, 'Bale start update must be accepted');
+    let blStart = lastBody('bl', 'sendMessage');
+    assert(blStart && blStart.text.includes('بات بله'), 'Bale welcome must be branded for Bale');
+    assert(blStart.reply_markup.inline_keyboard[0][0].callback_data === 'cfg:0', 'Bale menu must carry the same glass options');
+
+    // Bale configs flow also works (5 at a time, colored buttons sent as-is)
+    mockRecorder.botCalls = [];
+    await fetch(`${BASE}/api/blbot/hook/${blSecret}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ callback_query: { id: 'bq1', from: { id: ADMIN_ID }, message: { message_id: 20, chat: { id: ADMIN_ID } }, data: firstUserBtn.callback_data } }),
+    });
+    let blChunk = lastBody('bl', 'sendMessage');
+    assert(blChunk && (blChunk.text.match(/<code>/g) || []).length === 5, 'Bale must also deliver 5 copyable configs');
+
+    // Masked tokens never leak to the UI
+    const bootBot = await (await fetch(`${BASE}/api/bootstrap`, { headers: { cookie } })).json();
+    assert(bootBot.tgBot.configured && bootBot.tgBot.maskedToken.includes('••••'), 'Telegram token must stay masked in bootstrap');
+    assert(bootBot.blBot.configured && bootBot.blBot.maskedToken.includes('••••'), 'Bale token must stay masked in bootstrap');
+    assert(!JSON.stringify(bootBot).includes(TG_TOKEN), 'Raw Telegram token must never reach the client');
+    assert(!JSON.stringify(bootBot).includes(BL_TOKEN), 'Raw Bale token must never reach the client');
+
+    console.log('✓ [18/18] v1.2 Dual Delivery Bot -> Telegram + Bale auto-webhook, colored glass menus, 5-by-5 random configs, proxy deep-links, back buttons, masked tokens — ALL VERIFIED!');
+
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 17/17 ARAL SULFUR v1.1.1 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 18/18 ARAL SULFUR v1.2.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));

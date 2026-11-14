@@ -1,4 +1,4 @@
-/* ARAL SULFUR v1.1.1 — Simple Client Application (Vanilla ES6, zero deps, zero emojis)
+/* ARAL SULFUR v1.2.0 — Simple Client Application (Vanilla ES6, zero deps, zero emojis)
    Calm glass edition: 4 menus (Home / Subscribers / Network / Settings),
    live telemetry chart, digital clock, static & rotating per-user IPs,
    protocol & port selection, theme switcher and GitHub self-updater. */
@@ -39,6 +39,8 @@
     usersSelected: [],
     currentNodes: [],
     ghInfo: null,
+    tgBot: null,
+    blBot: null,
     currentVersion: '1.0.0'
   };
 
@@ -597,27 +599,177 @@
     }
   }
 
-  /* ------------------------------------------------------- digital clock */
+  /* ------------------------------------------- v1.2: clock + calendar + occasions */
+
+  var PERSIAN_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+  var PERSIAN_MONTHS_EN = ['Farvardin', 'Ordibehesht', 'Khordad', 'Tir', 'Mordad', 'Shahrivar', 'Mehr', 'Aban', 'Azar', 'Dey', 'Bahman', 'Esfand'];
+  var PERSIAN_DOW = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  var PERSIAN_DOW_LONG = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+
+  /* Solar Hijri occasions (official Iranian calendar, fixed dates) */
+  var OCCASIONS_SOLAR = {
+    '1/1': { fa: 'جشن نوروز / آغاز سال نو', en: 'Nowruz — Persian New Year', hol: true, ic: '✿' },
+    '1/2': { fa: 'عید نوروز', en: 'Nowruz holiday', hol: true, ic: '✿' },
+    '1/3': { fa: 'عید نوروز', en: 'Nowruz holiday', hol: true, ic: '✿' },
+    '1/4': { fa: 'عید نوروز', en: 'Nowruz holiday', hol: true, ic: '✿' },
+    '1/12': { fa: 'روز جمهوری اسلامی', en: 'Islamic Republic Day', hol: true, ic: '✦' },
+    '1/13': { fa: 'روز طبیعت (سیزده‌بدر)', en: 'Nature Day (Sizdah Bedar)', hol: true, ic: '✿' },
+    '2/1': { fa: 'روز بزرگداشت سعدی', en: 'National Day of Saadi', ic: '✎' },
+    '2/2': { fa: 'روز بزرگداشت فردوسی', en: 'National Day of Ferdowsi', ic: '✎' },
+    '2/3': { fa: 'روز زمین پاک', en: 'Clean Earth Day', ic: '❀' },
+    '2/10': { fa: 'روز ملی خلیج فارس', en: 'National Persian Gulf Day', ic: '✦' },
+    '2/12': { fa: 'روز معلم (شهادت استاد مطهری)', en: 'Teachers\' Day', ic: '✎' },
+    '2/25': { fa: 'روز بزرگداشت ابونصر فارابی', en: 'Day of Farabi', ic: '✎' },
+    '3/14': { fa: 'رحلت امام خمینی', en: 'Demise of Imam Khomeini', hol: true, ic: '✦' },
+    '3/15': { fa: 'قیام ۱۵ خرداد', en: 'Khordad 15 Uprising', hol: true, ic: '✦' },
+    '4/1': { fa: 'روز اصناف', en: 'Bazaar Guilds Day', ic: '✦' },
+    '6/5': { fa: 'روز بسیج مستضعفین', en: 'Basij Day', ic: '✦' },
+    '7/13': { fa: 'روز تبلیغ و اطلاع‌رسانی دینی', en: 'Religious Media Day', ic: '✦' },
+    '8/24': { fa: 'روز پیوند اولیا و مربیان', en: 'Parent–Teacher Day', ic: '✎' },
+    '9/30': { fa: 'شب یلدا (طولانی‌ترین شب سال)', en: 'Yalda Night', ic: '☾' },
+    '11/22': { fa: 'پیروزی انقلاب اسلامی', en: 'Victory of the Islamic Revolution', hol: true, ic: '✦' },
+    '12/29': { fa: 'روز ملی شدن صنعت نفت', en: 'Oil Nationalization Day', hol: true, ic: '✦' }
+  };
+
+  /* Lunar Hijri occasions — computed via Intl (islamic-umalqura); shown with a "قمری" tag */
+  var OCCASIONS_LUNAR = {
+    '1/10': { fa: 'روز عاشورا', en: 'Day of Ashura', hol: true, ic: '✦' },
+    '2/20': { fa: 'اربعین حسینی', en: 'Arba\'een', ic: '✦' },
+    '2/28': { fa: 'وفات پیامبر اکرم و شهادت امام حسن', en: 'Demise of Prophet Muhammad', hol: true, ic: '✦' },
+    '2/30': { fa: 'شهادت امام صادق', en: 'Martyrdom of Imam Sadiq', hol: true, ic: '✦' },
+    '3/17': { fa: 'میلاد پیامبر اکرم و امام صادق', en: 'Birthday of Prophet Muhammad', ic: '✦' },
+    '7/13': { fa: 'میلاد امام علی', en: 'Birthday of Imam Ali', ic: '✦' },
+    '7/27': { fa: 'مبعث پیامبر اکرم', en: 'Eid al-Mab\'ath', ic: '✦' },
+    '8/15': { fa: 'نیمه شعبان، میلاد امام زمان', en: 'Mid-Sha\'ban', ic: '✦' },
+    '9/21': { fa: 'شهادت امام علی', en: 'Martyrdom of Imam Ali', hol: true, ic: '✦' },
+    '10/1': { fa: 'عید سعید فطر', en: 'Eid al-Fitr', hol: true, ic: '✿' },
+    '10/2': { fa: 'تعطیل به مناسبت عید فطر', en: 'Eid al-Fitr holiday', hol: true, ic: '✿' },
+    '10/25': { fa: 'شهادت امام صادق', en: 'Martyrdom of Imam Sadiq', ic: '✦' },
+    '12/10': { fa: 'عید سعید قربان', en: 'Eid al-Adha', hol: true, ic: '✦' },
+    '12/18': { fa: 'عید سعید غدیر خم', en: 'Eid al-Ghadir', ic: '✦' }
+  };
+
+  function persianDateParts(date) {
+    try {
+      var parts = new Intl.DateTimeFormat('en-u-ca-persian', { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(date);
+      var out = {};
+      parts.forEach(function (p) { if (p.type === 'year' || p.type === 'month' || p.type === 'day') out[p.type] = Number(p.value); });
+      return out;
+    } catch (e) { return null; }
+  }
+
+  function lunarDateParts(date) {
+    try {
+      var parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { month: 'numeric', day: 'numeric' }).formatToParts(date);
+      var out = {};
+      parts.forEach(function (p) { if (p.type === 'month' || p.type === 'day') out[p.type] = Number(p.value.replace(/[^0-9]/g, '')); });
+      return out;
+    } catch (e) { return null; }
+  }
+
+  /* JS getDay(): Sun0..Sat6 — Persian week starts Saturday */
+  function persianDowIndex(jsDow) { return (jsDow + 1) % 7; }
+
+  function buildMiniCalendar(now) {
+    var host = $('mini-cal');
+    if (!host) return;
+    var p = persianDateParts(now);
+    if (!p || !p.month || !p.day) { host.innerHTML = '<div class="occ-empty">—</div>'; return; }
+
+    /* first day of the current Persian month (walk back at most 31 days) */
+    var first = new Date(now.getTime());
+    for (var i = 0; i < 34; i++) {
+      var fp = persianDateParts(first);
+      if (fp.day === 1) break;
+      first.setDate(first.getDate() - 1);
+    }
+    /* last day of the month (walk forward) */
+    var last = new Date(now.getTime());
+    for (var j = 0; j < 40; j++) {
+      var lp = persianDateParts(last);
+      if (lp.month !== p.month) { last.setDate(last.getDate() - 1); break; }
+      last.setDate(last.getDate() + 1);
+    }
+    var daysInMonth = persianDateParts(last).day || 31;
+    var lead = persianDowIndex(first.getDay());
+
+    var html = '<div class="cal-head"><span class="cal-month">' + esc(lang === 'fa' ? PERSIAN_MONTHS[p.month - 1] : PERSIAN_MONTHS_EN[p.month - 1]) + '</span><span class="cal-year">' + esc(String(p.year)) + '</span></div>';
+    html += '<div class="cal-grid">';
+    PERSIAN_DOW.forEach(function (d) { html += '<div class="cal-dow">' + d + '</div>'; });
+    for (var b = 0; b < lead; b++) html += '<div class="cal-day other"></div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var isToday = d === p.day;
+      var occ = OCCASIONS_SOLAR[p.month + '/' + d];
+      html += '<div class="cal-day' + (isToday ? ' today' : '') + '"' + (occ ? ' title="' + esc(occ.fa) + '"' : '') + '>' +
+        (lang === 'fa' ? String(d).replace(/\d/g, function (x) { return '۰۱۲۳۴۵۶۷۸۹'[+x]; }) : d) +
+        (occ ? '<i class="cal-dot"></i>' : '') + '</div>';
+    }
+    var trail = (7 - ((lead + daysInMonth) % 7)) % 7;
+    for (var t = 0; t < trail; t++) html += '<div class="cal-day other"></div>';
+    html += '</div>';
+    html += '<div class="cal-foot"><svg class="ic"><use href="#i-clock"/></svg><span class="fa">تقویم رسمی ایران</span><span class="en">Official Persian calendar</span></div>';
+    host.innerHTML = html;
+  }
+
+  function buildOccasions(now) {
+    var host = $('occ-list');
+    if (!host) return;
+    var items = [];
+    var p = persianDateParts(now);
+    if (p && p.month && p.day) {
+      var so = OCCASIONS_SOLAR[p.month + '/' + p.day];
+      if (so) items.push({ fa: so.fa, en: so.en, hol: so.hol, ic: so.ic, sub: tr('تقویم رسمی', 'Solar calendar') });
+    }
+    var l = lunarDateParts(now);
+    if (l && l.month && l.day) {
+      var lo = OCCASIONS_LUNAR[l.month + '/' + l.day];
+      if (lo) items.push({ fa: lo.fa, en: lo.en, hol: lo.hol, ic: lo.ic, sub: tr('تقویم قمری (تقریبی)', 'Lunar calendar (approx.)') });
+    }
+    if (!items.length) {
+      host.innerHTML = '<div class="occ-empty">' +
+        tr('امروز مناسبتی ثبت نشده است — روزِ خوبی داشته باشی ✦', 'No official occasion today — have a lovely day ✦') +
+        '</div>';
+      return;
+    }
+    host.innerHTML = items.map(function (o) {
+      return '<div class="occ-item' + (o.hol ? ' holiday' : '') + '">' +
+        '<span class="oc-ic">' + o.ic + '</span>' +
+        '<span><b>' + esc(tr(o.fa, o.en)) + '</b>' +
+        (o.hol ? '<span class="oc-sub">' + tr('تعطیل رسمی', 'Official holiday') + '</span>' : '') +
+        '<span class="oc-sub">' + esc(o.sub) + '</span></span></div>';
+    }).join('');
+  }
 
   function tickClock() {
     var clockEl = $('digital-clock');
-    if (!clockEl) return;
     var now = new Date();
-    var hh = String(now.getHours()).padStart(2, '0');
-    var mm = String(now.getMinutes()).padStart(2, '0');
-    var ss = String(now.getSeconds()).padStart(2, '0');
-    clockEl.textContent = hh + ':' + mm + ':' + ss;
+    if (clockEl) {
+      var hh = String(now.getHours()).padStart(2, '0');
+      var mm = String(now.getMinutes()).padStart(2, '0');
+      var ss = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = hh + ':' + mm + ':' + ss;
+    }
     var dateEl = $('clock-date');
     if (dateEl) {
       try {
-        dateEl.textContent = new Intl.DateTimeFormat(lang === 'fa' ? 'fa-IR' : 'en-US', {
+        var fmt = new Intl.DateTimeFormat(lang === 'fa' ? 'fa-IR' : 'en-US', {
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        }).format(now);
+        });
+        dateEl.innerHTML = '<b>' + esc(fmt.format(now)) + '</b>';
       } catch (e) {
         dateEl.textContent = now.toDateString();
       }
     }
+    /* calendar & occasions refresh at most once a minute (cheap) */
+    var minuteKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate() + '-' + lang;
+    if (calCacheKey !== minuteKey) {
+      calCacheKey = minuteKey;
+      buildMiniCalendar(now);
+      buildOccasions(now);
+    }
   }
+
+  var calCacheKey = '';
 
   /* ------------------------------------------------- sandbox demo store */
 
@@ -628,7 +780,7 @@
     if (demoStore) return demoStore;
     var now = Date.now();
     demoStore = {
-      ok: true, version: '1.1.1', state: 'ready', mode: 'admin',
+      ok: true, version: '1.2.0', state: 'ready', mode: 'admin',
       host: 'aral-sulfur-demo.pages.dev', edge: 'FRA', kvBound: true,
       tgProxy: (function () {
         var demoSecret = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
@@ -863,7 +1015,7 @@
     }
     if (STATE.mode === 'admin') {
       renderVisitorStrip();
-      renderHomeLinks();
+      renderSubAccordion();
       renderUsersLedger();
     }
   }
@@ -974,6 +1126,8 @@
       STATE.users = data.users || [];
       STATE.logs = data.logs || [];
       STATE.totals = data.totals || {};
+      if (data.tgBot !== undefined) STATE.tgBot = data.tgBot;
+      if (data.blBot !== undefined) STATE.blBot = data.blBot;
       $('demo-badge').hidden = !STATE.isDemo;
 
       if (!STATE.selectedUserId || !STATE.users.some(function (u) { return u.id === STATE.selectedUserId; })) {
@@ -985,9 +1139,11 @@
 
       populateSettingsForms();
       renderHomeStats();
-      renderHomeLinks();
+      renderSubAccordion();
       renderUsersLedger();
       renderTgTab();
+      renderPinCard();
+      renderBotCard();
       updateTelemetryKpis();
       syncGhUpdaterUI();
 
@@ -1006,14 +1162,18 @@
     if (Array.isArray(data.logs)) STATE.logs = data.logs;
     if (data.totals) STATE.totals = data.totals;
     if (data.version) STATE.currentVersion = data.version;
+    if (data.tgBot !== undefined) STATE.tgBot = data.tgBot;
+    if (data.blBot !== undefined) STATE.blBot = data.blBot;
     if (STATE.mode !== 'admin') return;
     if (!STATE.selectedUserId || !STATE.users.some(function (u) { return u.id === STATE.selectedUserId; })) {
       STATE.selectedUserId = STATE.users[0] ? STATE.users[0].id : '';
     }
     renderHomeStats();
-    renderHomeLinks();
+    renderSubAccordion();
     renderUsersLedger();
     renderTgTab();
+    renderPinCard();
+    renderBotCard();
     updateTelemetryKpis();
   }
 
@@ -1180,60 +1340,140 @@
     return proto + STATE.host + '/sub/' + encodeURIComponent(user.subToken);
   }
 
-  var currentQrFormat = 'b64';
+  /* ---------------------------------- v1.2: subscription links accordion */
 
-  function renderHomeLinks() {
-    var sel = $('sel-user');
-    if (!sel) return;
-    var prev = STATE.selectedUserId;
-    sel.innerHTML = '';
-    STATE.users.forEach(function (u, i) {
-      var opt = document.createElement('option');
-      opt.value = u.id;
-      var label = esc(u.name) + (i === 0 ? ' ' + tr('(مدیر)', '(admin)') : '');
-      opt.textContent = label;
-      sel.appendChild(opt);
-    });
-    if (prev && STATE.users.some(function (u) { return u.id === prev; })) sel.value = prev;
-    else if (STATE.users[0]) { sel.value = STATE.users[0].id; STATE.selectedUserId = STATE.users[0].id; }
+  var accOpenId = '';
 
-    var u = getSelectedUser();
-    if (!u) return;
-
-    /* status mini card */
-    var cell = $('u-status-cell');
-    if (cell) {
-      var stMap = {
-        active: ['فعال', 'ACTIVE', 'ok'],
-        paused: ['متوقف', 'PAUSED', 'bad'],
-        expired: ['منقضی', 'EXPIRED', 'bad'],
-        limited: ['پر شده', 'LIMITED', 'inv']
-      };
-      var st = stMap[u.status] || stMap.active;
-      var usedStr = formatBytes(u.usedBytes);
-      var limStr = u.limitBytes > 0 ? formatBytes(u.limitBytes) : tr('نامحدود', '∞');
-      var ipMode = u.autoRotateIps
-        ? tr('چرخش خودکار (' + (u.ipCount || 15) + ' آی‌پی)', 'AUTO-ROTATE (' + (u.ipCount || 15) + ')')
-        : (Array.isArray(u.ips) && u.ips.length ? tr('آی‌پی ثابت (' + u.ips.length + ')', 'STATIC (' + u.ips.length + ')') : tr('پیش‌فرض پنل', 'PANEL DEFAULT'));
-      cell.innerHTML =
-        '<span class="badge ' + st[2] + '">' + st[0] + '</span>' +
-        '<span class="chip">' + usedStr + ' / ' + limStr + '</span>' +
-        '<span class="chip">' + esc(ipMode) + '</span>';
-    }
-    if ($('node-count')) {
-      $('node-count').innerHTML = esc(String(u.nodeCount || 0)) + ' ' + tr('نود', 'NODES');
-    }
-    if ($('open-pass')) $('open-pass').href = u.statusUrl || subBase(u);
-    updateQr();
+  function statusBadgeHtml(u) {
+    var stMap = {
+      active: ['فعال', 'ACTIVE', 'ok'],
+      paused: ['متوقف', 'PAUSED', 'bad'],
+      expired: ['منقضی', 'EXPIRED', 'bad'],
+      limited: ['پر شده', 'LIMITED', 'inv']
+    };
+    var st = stMap[u.status] || stMap.active;
+    return '<span class="badge ' + st[2] + '">' + st[0] + '</span>';
   }
 
-  function updateQr() {
+  function userSubTiles(u) {
+    var urls = u.urls || {};
+    var defs = [
+      ['b64', 'اشتراک عمومی', 'NORMAL SUB', urls.normalSub],
+      ['xray', 'اشتراک ضد فیلتر', 'FRAGMENT SUB', urls.xrayFragmentSub],
+      ['sb', 'سینگ‌باکس / هیدیفای', 'SING-BOX', urls.singboxSub],
+      ['clash', 'کلش / می‌هومو', 'CLASH', urls.clashSub],
+      ['doh', 'DNS اختصاصی', 'PRIVATE DoH', urls.privateDoH]
+    ];
+    return '<div class="sub-grid">' + defs.map(function (d) {
+      return '<button class="link-tile" data-copy="' + esc(d[3] || '') + '" type="button">' +
+        '<svg class="ic"><use href="#i-copy"/></svg>' +
+        '<b><span class="fa">' + esc(d[1]) + '</span><span class="en">' + esc(d[2]) + '</span></b>' +
+        '<span>' + esc(d[0].toUpperCase()) + '</span></button>';
+    }).join('') + '</div>';
+  }
+
+  function renderSubAccordion() {
+    var host = $('sub-acc');
+    if (!host) return;
+    if (!STATE.users.length) {
+      host.innerHTML = '<div class="empty-note">' + tr('هنوز مشترکی نساخته‌ای — از تب «مشترکین» شروع کن.', 'No subscribers yet — start in the Subscribers tab.') + '</div>';
+      return;
+    }
+    if (!accOpenId || !STATE.users.some(function (u) { return u.id === accOpenId; })) {
+      accOpenId = STATE.users[0].id;
+    }
+    host.innerHTML = STATE.users.map(function (u, i) {
+      var open = u.id === accOpenId;
+      var protoLbl = u.protocols ? u.protocols.split(',').join(' · ').toUpperCase() : tr('پیش‌فرض پنل', 'PANEL DEFAULT');
+      var pinLbl = u.autoRotateIps
+        ? tr('IP چرخشی', 'ROTATING IP')
+        : ((u.ips && u.ips.length) ? tr('پین: ' + String(u.ips[0]).split('#')[0].slice(0, 22), 'PIN: ' + String(u.ips[0]).split('#')[0].slice(0, 22)) : tr('پیش‌فرض پنل', 'PANEL DEFAULT'));
+      var adminTag = (i === 0 && !String(u.name || '').includes('مدیر')) ? ' ' + tr('(مدیر)', '(admin)') : '';
+      var quota = formatBytes(u.usedBytes) + (u.limitBytes > 0 ? ' / ' + formatBytes(u.limitBytes) : ' / ∞');
+      return '<div class="acc-item' + (open ? ' open' : '') + (u.status === 'paused' ? ' paused' : '') + (u.enabled ? '' : ' off') + '" data-uid="' + esc(u.id) + '">' +
+        '<button class="acc-head" type="button">' +
+          '<span class="acc-ava">' + esc(String(u.name || '?').trim().charAt(0) || '?') + '</span>' +
+          '<span class="acc-mid">' +
+            '<span class="acc-name">' + esc(u.name) + esc(adminTag) + '</span>' +
+            '<span class="acc-meta">' + statusBadgeHtml(u) +
+              '<span class="mono">' + esc(protoLbl) + '</span>' +
+              '<span class="ltr mono">' + esc(quota) + '</span>' +
+              '<span>' + esc(pinLbl) + '</span></span>' +
+          '</span>' +
+          '<span class="acc-chev"><svg class="ic"><use href="#i-chev"/></svg></span>' +
+        '</button>' +
+        '<div class="acc-body"><div class="acc-body-in"><div class="acc-pad">' +
+          userSubTiles(u) +
+          '<div class="acc-quick">' +
+            '<button class="btn sm-btn" data-qsub="' + esc((u.urls && u.urls.normalSub) || '') + '" type="button"><svg class="ic ic-sm"><use href="#i-copy"/></svg><span class="fa">کپی ساب عادی</span><span class="en">COPY NORMAL</span></button>' +
+            '<button class="btn ghost sm-btn" data-qr="' + esc((u.urls && u.urls.pressPass) || '') + '" data-qrname="' + esc(u.name) + '" type="button"><svg class="ic ic-sm"><use href="#i-qr"/></svg><span class="fa">QR عادی</span><span class="en">NORMAL QR</span></button>' +
+            '<a class="btn ghost sm-btn" href="' + esc(u.statusUrl || subBase(u)) + '" target="_blank" rel="noopener"><svg class="ic ic-sm"><use href="#i-external"/></svg><span class="fa">صفحهٔ وضعیت</span><span class="en">STATUS PAGE</span></a>' +
+          '</div>' +
+        '</div></div></div>' +
+      '</div>';
+    }).join('');
+
+    /* wire interactions */
+    host.querySelectorAll('.acc-head').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var item = btn.closest('.acc-item');
+        var uid = item.getAttribute('data-uid');
+        accOpenId = (item.classList.contains('open') && uid === accOpenId) ? '' : uid;
+        host.querySelectorAll('.acc-item').forEach(function (el) {
+          el.classList.toggle('open', el.getAttribute('data-uid') === accOpenId);
+        });
+      });
+    });
+    host.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        copyText(btn.getAttribute('data-copy'), tr('لینک اشتراک کپی شد', 'Subscription link copied'), 'Sub link copied');
+      });
+    });
+    host.querySelectorAll('[data-qsub]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        copyText(btn.getAttribute('data-qsub'), tr('لینک ساب عادی کپی شد', 'Normal sub link copied'), 'Copied');
+      });
+    });
+    host.querySelectorAll('[data-qr]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openQrModal(btn.getAttribute('data-qr'), btn.getAttribute('data-qrname'));
+      });
+    });
+
     var u = getSelectedUser();
-    if (!u || !u.urls) return;
-    var text = currentQrFormat === 'xray' ? u.urls.xrayFragmentSub : u.urls.pressPass;
-    STATE.currentQrText = text;
-    drawQrInto('main-qr', text);
-    if ($('qr-caption')) $('qr-caption').textContent = text;
+    if (u && $('node-count')) {
+      $('node-count').innerHTML = esc(String(u.nodeCount || 0)) + ' ' + tr('نود', 'NODES');
+    }
+    if (u && $('open-pass')) $('open-pass').href = u.statusUrl || subBase(u);
+  }
+
+  /* ------------------------------------------- v1.2: quick QR modal */
+
+  function openQrModal(text, name) {
+    var modal = $('qr-modal');
+    if (!modal || !text) return;
+    $('qr-modal-title').textContent = tr('QR اشتراک — ' + (name || ''), 'SUB QR — ' + (name || ''));
+    $('qr-modal-url').textContent = text;
+    drawQrInto('qr-modal-qr', text);
+    modal.hidden = false;
+  }
+
+  function closeQrModal() {
+    var modal = $('qr-modal');
+    if (modal) modal.hidden = true;
+  }
+
+  if ($('qr-modal-close')) $('qr-modal-close').onclick = closeQrModal;
+  if ($('qr-modal')) {
+    $('qr-modal').addEventListener('click', function (ev) {
+      if (ev.target === $('qr-modal')) closeQrModal();
+    });
+  }
+  if ($('qr-modal-copy')) {
+    $('qr-modal-copy').onclick = function () {
+      var url = $('qr-modal-url').textContent || '';
+      copyText(url, tr('لینک ساب عادی کپی شد', 'Normal sub link copied'), 'Copied');
+    };
   }
 
   /* ------------------------------------------------------ telegram proxy tab */
@@ -1358,35 +1598,6 @@
     });
   }
 
-  ['b64', 'xray', 'sb', 'clash', 'doh'].forEach(function (kind) {
-    var btn = $('cp-' + kind);
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      var u = getSelectedUser();
-      if (!u || !u.urls) return;
-      var url = kind === 'b64' ? u.urls.normalSub
-        : kind === 'xray' ? u.urls.xrayFragmentSub
-        : kind === 'sb' ? u.urls.singboxSub
-        : kind === 'clash' ? u.urls.clashSub
-        : u.urls.privateDoH;
-      copyText(url,
-        tr('اشتراک', 'Sub') + ' (' + kind.toUpperCase() + ')',
-        kind.toUpperCase() + ' sub');
-    });
-  });
-
-  if ($('qr-btn-b64')) {
-    $('qr-btn-b64').onclick = function () { currentQrFormat = 'b64'; updateQr(); };
-  }
-  if ($('qr-btn-xray')) {
-    $('qr-btn-xray').onclick = function () { currentQrFormat = 'xray'; updateQr(); };
-  }
-  if ($('sel-user')) {
-    $('sel-user').addEventListener('change', function () {
-      STATE.selectedUserId = $('sel-user').value;
-      renderHomeLinks();
-    });
-  }
   if ($('btn-speed-burst')) {
     $('btn-speed-burst').addEventListener('click', function () {
       setChartMode('live');
@@ -1520,8 +1731,33 @@
         } catch (err) { showToast(err.message, err.message); }
       };
 
+      /* v1.2 — quick actions: copy normal sub + normal QR */
+      var copySubBtn = document.createElement('button');
+      copySubBtn.className = 'btn sm-btn';
+      copySubBtn.type = 'button';
+      copySubBtn.title = tr('کپی لینک ساب عادی', 'Copy normal sub link');
+      copySubBtn.innerHTML = '<svg class="ic ic-sm"><use href="#i-copy"/></svg>' + tr('کپی ساب', 'SUB');
+      copySubBtn.onclick = function () {
+        var url = u.urls && u.urls.normalSub;
+        if (!url) return showToast('لینک یافت نشد', 'No link');
+        copyText(url, tr('لینک ساب عادی «' + u.name + '» کپی شد', 'Normal sub link copied'), 'Copied');
+      };
+
+      var qrBtn2 = document.createElement('button');
+      qrBtn2.className = 'btn ghost sm-btn';
+      qrBtn2.type = 'button';
+      qrBtn2.title = tr('نمایش QR اشتراک عادی', 'Show normal sub QR');
+      qrBtn2.innerHTML = '<svg class="ic ic-sm"><use href="#i-qr"/></svg>' + tr('QR', 'QR');
+      qrBtn2.onclick = function () {
+        var url = u.urls && u.urls.pressPass;
+        if (!url) return showToast('لینک یافت نشد', 'No link');
+        openQrModal(url, u.name);
+      };
+
       acts.appendChild(sel);
       acts.appendChild(editBtn);
+      acts.appendChild(copySubBtn);
+      acts.appendChild(qrBtn2);
       acts.appendChild(toggleBtn);
       acts.appendChild(resetBtn);
 
@@ -1613,7 +1849,8 @@
   function refreshIpModeBoxes() {
     var auto = $('uf-autorot-ips') && $('uf-autorot-ips').checked;
     if ($('uf-static-box')) $('uf-static-box').hidden = auto;
-    if ($('uf-rot-box')) $('uf-rot-box').hidden = !auto;
+    if ($('uf-rot-box2')) $('uf-rot-box2').hidden = !auto;
+    if ($('uf-pin-box')) $('uf-pin-box').hidden = auto;
   }
 
   function openUserModal(u) {
@@ -1643,6 +1880,14 @@
     $('uf-ipcount').value = u ? String(u.ipCount || 15) : '15';
     var poolSel = $('uf-pooltype');
     if (poolSel) poolSel.value = (u && u.poolType) ? String(u.poolType) : 'mixed';
+    /* v1.2 — quick pin field mirrors the first static entry */
+    var pinInp = $('uf-pin-ip');
+    if (pinInp) {
+      var firstIp = u && Array.isArray(u.ips) && u.ips.length ? String(u.ips[0]).split('#')[0].trim() : '';
+      pinInp.value = (!auto && u && Array.isArray(u.ips) && u.ips.length === 1) ? firstIp : '';
+    }
+    var pinRes = $('uf-pin-result');
+    if (pinRes) pinRes.innerHTML = '';
     refreshIpModeBoxes();
 
     $('uf-del').hidden = !u || STATE.users.length <= 1;
@@ -1698,6 +1943,10 @@
     if ($('uf-p-vless') && $('uf-p-vless').classList.contains('on')) protos.push('vless');
     if ($('uf-p-trojan') && $('uf-p-trojan').classList.contains('on')) protos.push('trojan');
     if ($('uf-p-ss') && $('uf-p-ss').classList.contains('on')) protos.push('ss');
+    var ips = textToLines($('uf-ips').value);
+    /* v1.2 — quick private pin wins when the static list is empty */
+    var pinVal = $('uf-pin-ip') ? $('uf-pin-ip').value.trim() : '';
+    if (pinVal && !ips.length) ips = [pinVal];
     return {
       name: $('uf-name').value.trim(),
       note: $('uf-note').value.trim(),
@@ -1705,7 +1954,7 @@
       expiryDays: Number($('uf-days').value) || 0,
       startOnFirstUse: $('uf-first').checked,
       protocols: protos.join(','),
-      ips: textToLines($('uf-ips').value),
+      ips: ips,
       autoRotateIps: $('uf-autorot-ips').checked,
       ipCount: Number($('uf-ipcount').value) || 15,
       poolType: $('uf-pooltype') && $('uf-pooltype').value !== 'mixed' ? ($('uf-pooltype').value || '') : ''
@@ -1750,13 +1999,349 @@
         }
         closeUserModal();
         softApplyBootstrap(res);
-        renderHomeLinks();
+        renderSubAccordion();
       } catch (e2) {
         if (err) { err.hidden = false; err.textContent = e2.message; }
         showToast(e2.message, e2.message);
       }
     });
   }
+
+  /* ================================================== v1.2: IP TEST & PIN */
+
+  /* Provider chain ported from ARAL IP Location (multi-source, fallback order) */
+  var GEO_PROVIDERS = [
+    {
+      id: 'ipwho', label: 'IPWho.is',
+      url: function (ip) { return 'https://ipwho.is/' + encodeURIComponent(ip); },
+      map: function (j) {
+        if (!j || j.success === false || !j.country) return null;
+        var c = j.connection || {};
+        return { cc: j.country_code || '', country: j.country, region: j.region || '', city: j.city || '', org: c.org || c.isp || '', isp: c.isp || '', asn: c.asn ? 'AS' + c.asn : '' };
+      }
+    },
+    {
+      id: 'freeipapi', label: 'FreeIPAPI',
+      url: function (ip) { return 'https://free.freeipapi.com/api/v1/json/' + encodeURIComponent(ip); },
+      map: function (j) {
+        if (!j || !j.countryCode) return null;
+        return { cc: j.countryCode, country: j.countryName || '', region: j.regionName || '', city: j.cityName || '', org: j.asnOrganization || '', isp: j.asnOrganization || '', asn: j.asn ? 'AS' + j.asn : '' };
+      }
+    },
+    {
+      id: 'ipinfo', label: 'IPinfo.io',
+      url: function (ip) { return 'https://ipinfo.io/' + encodeURIComponent(ip) + '/json'; },
+      map: function (j) {
+        if (!j || j.error || !j.ip) return null;
+        var org = j.org || '';
+        return { cc: j.country || '', country: '', region: j.region || '', city: j.city || '', org: org.replace(/^AS\d+\s*/, ''), isp: org, asn: (org.match(/AS\d+/) || [''])[0] };
+      }
+    },
+    {
+      id: 'ipapico', label: 'ipapi.co',
+      url: function (ip) { return 'https://ipapi.co/' + encodeURIComponent(ip) + '/json/'; },
+      map: function (j) {
+        if (!j || j.error || !j.country_code) return null;
+        return { cc: j.country_code, country: j.country_name || j.country || '', region: j.region || '', city: j.city || '', org: j.organization || j.org || '', isp: j.isp || j.org || '', asn: j.asn || '' };
+      }
+    }
+  ];
+
+  function fetchGeoWithTimeout(url, ms) {
+    return new Promise(function (resolve, reject) {
+      var ctrl = new AbortController();
+      var tid = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms || 6000);
+      fetch(url, { signal: ctrl.signal, credentials: 'omit', cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { clearTimeout(tid); resolve(j); })
+        .catch(function (e) { clearTimeout(tid); reject(e); });
+    });
+  }
+
+  async function lookupIpLocation(ip) {
+    for (var i = 0; i < GEO_PROVIDERS.length; i++) {
+      var p = GEO_PROVIDERS[i];
+      try {
+        var j = await fetchGeoWithTimeout(p.url(ip), 6000);
+        var geo = p.map(j);
+        if (geo && (geo.cc || geo.org)) { geo.src = p.label; return geo; }
+      } catch (e) { /* next provider */ }
+    }
+    return null;
+  }
+
+  /* Approximate browser-side ping: min TLS-handshake time / 2 (≈ TCP RTT) */
+  async function probeIpPing(host) {
+    var samples = [];
+    for (var i = 0; i < 3; i++) {
+      var ms = await new Promise(function (resolve) {
+        var t0 = performance.now();
+        var ctrl = new AbortController();
+        var tid = setTimeout(function () { try { ctrl.abort(); } catch (e) {} resolve(-1); }, 4500);
+        fetch('https://' + host + '/cdn-cgi/trace?_=' + Math.random(), {
+          mode: 'no-cors', cache: 'no-store', credentials: 'omit', signal: ctrl.signal
+        }).then(function () {
+          clearTimeout(tid); resolve(Math.round(performance.now() - t0));
+        }).catch(function () {
+          clearTimeout(tid); resolve(Math.round(performance.now() - t0));
+        });
+      });
+      if (ms > 0) samples.push(ms);
+    }
+    if (!samples.length) return null;
+    return Math.max(1, Math.round(Math.min.apply(null, samples) / 2));
+  }
+
+  function ccFlag(cc) {
+    if (!/^[A-Za-z]{2}$/.test(cc || '')) return '🌐';
+    return String.fromCodePoint.apply(null, cc.toUpperCase().split('').map(function (ch) { return 0x1f1e6 + ch.charCodeAt(0) - 65; }));
+  }
+
+  function pingBadgeCls(ms) {
+    if (ms <= 90) return '';
+    if (ms <= 220) return 'mid';
+    return 'bad';
+  }
+
+  function renderIpTestResult(boxId, geo, pingMs) {
+    var box = $(boxId);
+    if (!box) return;
+    if (!geo && pingMs == null) {
+      box.innerHTML = '<div class="ip-result"><span class="ip-res-row" style="color:var(--err)">' +
+        tr('لوکیشن این آدرس پیدا نشد — آدرس را بررسی کن یا دوباره تست بزن.', 'Could not resolve this address — check it and retry.') +
+        '</span></div>';
+      return;
+    }
+    var rows = '';
+    if (geo) {
+      rows += '<div class="ip-res-row"><span class="lbl">' + tr('لوکیشن', 'LOCATION') + '</span>' +
+        '<span class="ip-flag">' + ccFlag(geo.cc) + '</span><b>' +
+        esc([geo.country, geo.region, geo.city].filter(Boolean).join(' · ') || (geo.cc || '—')) + '</b></div>';
+      rows += '<div class="ip-res-row"><span class="lbl">' + tr('ارائه‌دهنده', 'ISP') + '</span><b>' + esc(geo.isp || geo.org || '—') + '</b>' +
+        (geo.asn ? '<span class="chip mono">' + esc(geo.asn) + '</span>' : '') + '</div>';
+    }
+    if (pingMs != null) {
+      rows += '<div class="ip-res-row"><span class="lbl">' + tr('پینگ', 'PING') + '</span>' +
+        '<span class="ip-ping ' + pingBadgeCls(pingMs) + '"><svg class="ic"><use href="#i-bolt"/></svg>~' + pingMs + ' ms</span>' +
+        '<span style="font-size:11px;color:var(--dim)">' + tr('از سمت دستگاه شما', 'from your device') + '</span></div>';
+    }
+    box.innerHTML = '<div class="ip-result">' + rows + '</div>';
+  }
+
+  function renderIpTesting(boxId, host) {
+    var box = $(boxId);
+    if (box) {
+      box.innerHTML = '<div class="ip-result"><div class="ip-test-skel"><span class="spin"></span>' +
+        tr('در حال تست «' + host + '» …', 'Testing ' + host + ' …') + '</div></div>';
+    }
+  }
+
+  async function runIpTest(inpId, boxId) {
+    var inp = $(inpId);
+    if (!inp) return null;
+    var raw = inp.value.trim().split('#')[0].trim();
+    if (!raw) {
+      showToast(tr('اول یک آی‌پی یا دامنه وارد کن.', 'Enter an IP or domain first.'), 'Enter an IP first');
+      return null;
+    }
+    renderIpTesting(boxId, raw);
+    var geoP = lookupIpLocation(raw);
+    var pingP = probeIpPing(raw);
+    var geo = await geoP;
+    var ping = await pingP;
+    renderIpTestResult(boxId, geo, ping);
+    return { geo: geo, ping: ping, host: raw };
+  }
+
+  /* ---- network tab: global pin card ---- */
+
+  function renderPinCard() {
+    var s = (STATE.settings || {});
+    var meta = s.pinnedIPMeta || null;
+    var pinned = String(s.pinnedIP || '').trim();
+    var inp = $('pin-ip-inp');
+    if (inp && !inp.value.trim()) inp.value = pinned ? String(pinned).split('#')[0] : '';
+    var clearBtn = $('pin-ip-clear');
+    if (clearBtn) clearBtn.hidden = !pinned;
+    var saveBtn = $('pin-ip-save');
+    if (saveBtn) {
+      saveBtn.innerHTML = pinned
+        ? '<svg class="ic ic-sm"><use href="#i-check"/></svg><span class="fa">به‌روزرسانی پین</span><span class="en">UPDATE PIN</span>'
+        : '<svg class="ic ic-sm"><use href="#i-check"/></svg><span class="fa">ثبت آی‌پی</span><span class="en">REGISTER PIN</span>';
+    }
+    if (pinned && meta) {
+      renderIpTestResult('pin-ip-result', meta, meta.ping || null);
+      var box = $('pin-ip-result');
+      if (box) {
+        var note = document.createElement('div');
+        note.className = 'ip-pin-state';
+        note.style.marginTop = '10px';
+        note.innerHTML = '<svg class="ic ic-sm" style="color:var(--honey-hi)"><use href="#i-pin"/></svg><b>' +
+          tr('پین فعال:', 'Active pin:') + '</b><span class="mono">' + esc(pinned) + '</span>' +
+          (meta.cc ? '<span class="chip">' + ccFlag(meta.cc) + ' ' + esc(meta.cc.toUpperCase()) + '</span>' : '') +
+          '<span class="badge ok">' + tr('ثبت‌شده', 'REGISTERED') + '</span>';
+        box.appendChild(note);
+      }
+    } else if (pinned) {
+      var box2 = $('pin-ip-result');
+      if (box2) {
+        box2.innerHTML = '<div class="ip-pin-state"><svg class="ic ic-sm" style="color:var(--honey-hi)"><use href="#i-pin"/></svg><b>' +
+          tr('پین فعال:', 'Active pin:') + '</b><span class="mono">' + esc(pinned) + '</span>' +
+          '<span class="badge ok">' + tr('ثبت‌شده', 'REGISTERED') + '</span></div>';
+      }
+    }
+  }
+
+  if ($('pin-ip-test')) {
+    $('pin-ip-test').onclick = function () { runIpTest('pin-ip-inp', 'pin-ip-result'); };
+  }
+  if ($('pin-ip-save')) {
+    $('pin-ip-save').onclick = async function () {
+      var raw = $('pin-ip-inp').value.trim();
+      if (!raw) {
+        showToast(tr('اول آی‌پی را وارد کن.', 'Enter the IP first.'), 'Enter the IP');
+        return;
+      }
+      var btn = $('pin-ip-save');
+      btn.disabled = true;
+      try {
+        /* make sure a fresh test result backs the metadata */
+        var res = await runIpTest('pin-ip-inp', 'pin-ip-result');
+        var meta = res && res.geo ? {
+          cc: res.geo.cc || '', country: res.geo.country || '', region: res.geo.region || '',
+          city: res.geo.city || '', isp: res.geo.isp || res.geo.org || '', asn: res.geo.asn || '',
+          ping: res.ping != null ? res.ping : 0, testedAt: Date.now()
+        } : { cc: '', country: '', region: '', city: '', isp: '', asn: '', ping: 0, testedAt: Date.now() };
+        var remark = '';
+        var s = STATE.settings || {};
+        var existing = String(s.pinnedIP || '');
+        var hashIdx = existing.indexOf('#');
+        if (existing.split('#')[0].trim() === raw.split('#')[0].trim() && hashIdx >= 0) {
+          remark = existing.slice(hashIdx + 1);
+        }
+        var val = raw + (remark ? '#' + remark : (meta.cc ? '#' + meta.cc.toUpperCase() : ''));
+        var r = await api('/api/settings', 'PUT', { pinnedIP: val, pinnedIPMeta: meta });
+        softApplyBootstrap(r);
+        renderPinCard();
+        showToast(tr('آی‌پی برای کل پنل پین شد — همهٔ کانفیگ‌ها روی همین آی‌پی سرویس می‌شوند.', 'IP pinned panel-wide — every config now serves through it.'), 'IP pinned');
+      } catch (err) {
+        showToast(err.message, err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+  if ($('pin-ip-clear')) {
+    $('pin-ip-clear').onclick = async function () {
+      if (!confirm(tr('پین آی‌پی حذف شود؟ کانفیگ‌ها به حالت عادی برمی‌گردند.', 'Remove the IP pin? Configs return to normal.'))) return;
+      try {
+        var r = await api('/api/settings', 'PUT', { pinnedIP: '', pinnedIPMeta: null });
+        softApplyBootstrap(r);
+        if ($('pin-ip-inp')) $('pin-ip-inp').value = '';
+        if ($('pin-ip-result')) $('pin-ip-result').innerHTML = '';
+        renderPinCard();
+        showToast(tr('پین حذف شد.', 'Pin removed.'), 'Pin removed');
+      } catch (err) { showToast(err.message, err.message); }
+    };
+  }
+  if ($('uf-pin-test')) {
+    $('uf-pin-test').onclick = function () { runIpTest('uf-pin-ip', 'uf-pin-result'); };
+  }
+
+  /* ================================================== v1.2: BOT SETUP CARD */
+
+  var botPlatform = 'tg';
+
+  function renderBotStatusLine(boxId, info) {
+    var box = $(boxId);
+    if (!box) return;
+    var isTg = boxId.indexOf('tg-') === 0;
+    var provider = isTg ? 'تلگرام' : 'بله';
+    if (!info || !info.configured) {
+      box.className = 'bot-status';
+      box.innerHTML = '<span class="dot-live"></span>' + tr('باتی ثبت نشده است.', 'No bot registered yet.');
+      return;
+    }
+    var hasErr = info.lastError || info.state === 'error';
+    box.className = 'bot-status ' + (hasErr ? 'err' : 'on');
+    var bits = ['<span class="dot-live"></span><b>@' + esc(info.username || info.botId || 'bot') + '</b>'];
+    if (info.webhookSetAt) {
+      var when = new Date(info.webhookSetAt);
+      bits.push('<span>' + tr('وبهوک ست شده · ', 'webhook set · ') + esc(isTg ? (when.toLocaleDateString ? when.toLocaleDateString('fa-IR') : String(when)) : String(when)) + '</span>');
+    }
+    if (info.adminIds && info.adminIds.length) bits.push('<span class="mono">' + esc(info.adminIds.join(',')) + '</span>');
+    if (hasErr) bits.push('<span style="color:var(--err)">' + esc(String(info.lastError).slice(0, 90)) + '</span>');
+    box.innerHTML = bits.join(' ');
+  }
+
+  function renderBotCard() {
+    var s = STATE.settings || {};
+    var tgInfo = (STATE.tgBot && STATE.tgBot.configured) ? STATE.tgBot : (s.tgBotInfo ? { configured: true, username: s.tgBotInfo.username, botId: s.tgBotInfo.botId, adminIds: (s.tgBotAdminIds || '').split(',').filter(Boolean), lastError: s.tgBotInfo.lastError, webhookSetAt: s.tgBotInfo.webhookSetAt } : null);
+    var blInfo = (STATE.blBot && STATE.blBot.configured) ? STATE.blBot : (s.blBotInfo ? { configured: true, username: s.blBotInfo.username, botId: s.blBotInfo.botId, adminIds: (s.blBotAdminIds || '').split(',').filter(Boolean), lastError: s.blBotInfo.lastError, webhookSetAt: s.blBotInfo.webhookSetAt } : null);
+    renderBotStatusLine('tg-bot-status', tgInfo);
+    renderBotStatusLine('bl-bot-status', blInfo);
+    if ($('tg-bot-del')) $('tg-bot-del').hidden = !tgInfo;
+    if ($('bl-bot-del')) $('bl-bot-del').hidden = !blInfo;
+    /* prefill admin ids from stored values for easy editing */
+    if ($('tg-admin-ids') && !$('tg-admin-ids').value && tgInfo && tgInfo.adminIds) $('tg-admin-ids').value = tgInfo.adminIds.join(',');
+    if ($('bl-admin-ids') && !$('bl-admin-ids').value && blInfo && blInfo.adminIds) $('bl-admin-ids').value = blInfo.adminIds.join(',');
+  }
+
+  function setBotPlatform(p) {
+    botPlatform = p === 'bl' ? 'bl' : 'tg';
+    if ($('bot-tab-tg')) {
+      $('bot-tab-tg').classList.toggle('active', botPlatform === 'tg');
+      $('bot-tab-tg').setAttribute('aria-selected', botPlatform === 'tg' ? 'true' : 'false');
+    }
+    if ($('bot-tab-bl')) {
+      $('bot-tab-bl').classList.toggle('active', botPlatform === 'bl');
+      $('bot-tab-bl').setAttribute('aria-selected', botPlatform === 'bl' ? 'true' : 'false');
+    }
+    if ($('bot-pane-tg')) $('bot-pane-tg').hidden = botPlatform !== 'tg';
+    if ($('bot-pane-bl')) $('bot-pane-bl').hidden = botPlatform !== 'bl';
+  }
+
+  if ($('bot-tab-tg')) $('bot-tab-tg').onclick = function () { setBotPlatform('tg'); };
+  if ($('bot-tab-bl')) $('bot-tab-bl').onclick = function () { setBotPlatform('bl'); };
+
+  async function saveBot(platform) {
+    var isTg = platform === 'tg';
+    var token = $(isTg ? 'tg-token' : 'bl-token').value.trim();
+    var adminIds = $(isTg ? 'tg-admin-ids' : 'bl-admin-ids').value.trim();
+    var btn = $(isTg ? 'tg-bot-save' : 'bl-bot-save');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      var r = await api('/api/' + (isTg ? 'tgbot' : 'blbot') + '/save', 'POST', { token: token, adminIds: adminIds });
+      if (r && r.ok) {
+        showToast(tr('بات «' + (r.bot ? '@' + r.bot.username : '') + '» ثبت و وبهوک خودکار ست شد ✅', 'Bot registered & webhook wired ✅'), 'Bot ready');
+        $(isTg ? 'tg-token' : 'bl-token').value = '';
+        if (r.payload) softApplyBootstrap(r.payload);
+        renderBotCard();
+      }
+    } catch (err) {
+      showToast(err.message, err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  if ($('tg-bot-save')) $('tg-bot-save').onclick = function () { saveBot('tg'); };
+  if ($('bl-bot-save')) $('bl-bot-save').onclick = function () { saveBot('bl'); };
+
+  async function deleteBot(platform) {
+    var isTg = platform === 'tg';
+    if (!confirm(tr('بات حذف شود؟ وبهوک پاک می‌شود.', 'Delete this bot? The webhook will be removed.'))) return;
+    try {
+      var r = await api('/api/' + (isTg ? 'tgbot' : 'blbot') + '/disconnect', 'POST', {});
+      if (r && r.payload) softApplyBootstrap(r.payload);
+      renderBotCard();
+      showToast(tr('بات حذف شد.', 'Bot removed.'), 'Bot removed');
+    } catch (err) { showToast(err.message, err.message); }
+  }
+
+  if ($('tg-bot-del')) $('tg-bot-del').onclick = function () { deleteBot('tg'); };
+  if ($('bl-bot-del')) $('bl-bot-del').onclick = function () { deleteBot('bl'); };
 
   /* ------------------------------------------------------ network settings */
 

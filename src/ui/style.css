@@ -65,23 +65,56 @@ html[data-theme="light"]{
   --bg-2:#e6e0d7;
   --txt:#1D2117;
   --body-txt:#3a4030;
-  --mut:#635d4e;
-  --dim:#8b8471;
-  --panel:rgba(255,255,255,.55);
-  --panel-2:rgba(255,255,255,.75);
-  --field:rgba(255,255,255,.75);
-  --glass:rgba(255,255,255,.6);
-  --glass-hard:rgba(255,255,255,.94);
-  --line:rgba(29,33,23,.14);
-  --hairline:rgba(29,33,23,.10);
+  --mut:#5d5747;
+  --dim:#736c59;
+  --panel:rgba(255,255,255,.74);
+  --panel-2:rgba(255,255,255,.92);
+  --field:rgba(255,255,255,.88);
+  --glass:rgba(255,255,255,.66);
+  --glass-hard:rgba(255,253,249,.97);
+  --line:rgba(29,33,23,.22);
+  --hairline:rgba(29,33,23,.14);
   --chk-line:rgba(29,33,23,.34);
   --track:rgba(29,33,23,.10);
   --honey-hi:#8a5a0c;
   --err:#c25a4b;
   --warn:#8a5a0c;
   --ok:#395738;
-  --shadow:0 18px 44px -24px rgba(60,50,20,.35);
+  --shadow:0 18px 44px -24px rgba(60,50,20,.35),0 2px 10px -4px rgba(60,50,20,.14);
+  --card-edge:linear-gradient(180deg,rgba(217,160,58,.35),rgba(217,160,58,0) 42%);
 }
+/* v1.2 — light theme: clear separation between page background and glass cards.
+   Cards get near-opaque ivory glass, a warm honey top edge, and a soft golden glow
+   so options visibly float above the cream background. */
+html[data-theme="light"] .card,
+html[data-theme="light"] .modal-box{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 46%),
+    var(--panel-2);
+  box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.65) inset;
+}
+html[data-theme="light"] .card::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:3px;border-radius:3px 3px 0 0;
+  background:linear-gradient(90deg,transparent,rgba(217,160,58,.75) 18%,rgba(217,160,58,.55) 50%,rgba(111,154,109,.45) 82%,transparent);
+  pointer-events:none;
+}
+html[data-theme="light"] .ucard,
+html[data-theme="light"] .kpi,
+html[data-theme="light"] .link-tile,
+html[data-theme="light"] .node-row,
+html[data-theme="light"] .tg-port{
+  background:var(--panel-2);
+  box-shadow:0 6px 18px -12px rgba(60,50,20,.28);
+}
+html[data-theme="light"] .topbar{
+  background:rgba(255,253,249,.9);
+  box-shadow:0 10px 30px -18px rgba(60,50,20,.3);
+}
+html[data-theme="light"] .bg-wash i.w1{background:radial-gradient(circle,rgba(217,160,58,.30),transparent 65%)}
+html[data-theme="light"] .bg-wash i.w2{background:radial-gradient(circle,rgba(229,235,112,.24),transparent 65%)}
+html[data-theme="light"] .bg-wash i.w3{background:radial-gradient(circle,rgba(247,144,130,.20),transparent 65%)}
+html[data-theme="light"] .tabbar{background:transparent}
+html[data-theme="light"] .tab-btn.active{box-shadow:0 10px 24px -10px rgba(217,160,58,.75)}
 
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -151,6 +184,7 @@ h1,h2,h3,h4{font-weight:700;line-height:1.6;margin:0}
 /* ───────────────────────── glass card ───────────────────────── */
 .card{
   position:relative;
+  scroll-margin-top:74px;
   background:var(--panel);
   -webkit-backdrop-filter:blur(18px) saturate(1.25);
   backdrop-filter:blur(18px) saturate(1.25);
@@ -462,9 +496,24 @@ details.soft .disc-body{padding:4px 0 12px}
   direction:ltr;
 }
 .logo-word small{display:block;font-size:9.5px;letter-spacing:.34em;color:var(--dim);font-weight:500;margin-top:2px}
-.top-mid{margin:0 auto;display:flex;gap:8px;align-items:center}
-.top-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--dim)}
-.top-acts{display:flex;align-items:center;gap:8px;margin-inline-start:auto}
+/* topbar — v1.2: never lets wide pill rows push the page sideways on phones */
+.topbar{
+  min-width:0;
+}
+.topbar .logo{flex:0 1 auto;min-width:0}
+.top-mid{margin:0 auto;display:flex;gap:8px;align-items:center;min-width:0}
+.top-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-acts{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:0 0 auto}
+@media (max-width:700px){
+  .top-mid{display:none}
+  .topbar{gap:8px}
+}
+@media (max-width:560px){
+  #s-free-btn .fa,#s-free-btn .en{display:none!important}
+  #s-free-btn{padding:8px 11px}
+  .topbar{flex-wrap:nowrap}
+  .logo-word{display:none}
+}
 
 /* hero (login / sub page wordmark) */
 .hero{text-align:center;padding:clamp(26px,5vw,48px) 0 clamp(8px,2vw,16px)}
@@ -551,8 +600,8 @@ details.soft .disc-body{padding:4px 0 12px}
 .chart-legend .lg-rtt i{background:repeating-linear-gradient(90deg,var(--coral) 0 5px,transparent 5px 9px)}
 .chart-legend .lg-usage i{background:linear-gradient(90deg,var(--forest),var(--forest-hi))}
 
-/* digital clock */
-.clock-card{display:flex;flex-wrap:wrap;align-items:center;gap:18px}
+/* digital clock — v1.2 trio layout fills the whole card */
+.clock-card{display:block}
 .clock-side{flex:1 1 240px}
 .digital-clock{
   font-family:var(--disp);font-weight:600;
@@ -566,8 +615,134 @@ details.soft .disc-body{padding:4px 0 12px}
 .clock-date{text-align:center;color:var(--mut);font-size:13.5px;margin-top:6px}
 .clock-ampm{color:var(--coral);font-size:.4em;vertical-align:super;margin-inline-start:6px}
 
+/* v1.2 — clock hero trio: big centered clock on top, calendar & occasions on the wings */
+.clock-trio{display:flex;flex-direction:column;gap:16px}
+.clock-hero{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:6px 0 2px;
+}
+.clock-hero .digital-clock{font-size:clamp(46px,6.5vw,64px)}
+.clock-hero .clock-date{margin-top:2px;font-size:14px}
+.clock-hero .clock-date b{color:var(--honey-hi);font-weight:600}
+.clock-wings{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;
+}
+.wing{
+  border:1px solid var(--hairline);border-radius:var(--radius-sm);
+  background:var(--panel);padding:13px 15px;min-width:0;
+}
+.wing-cap{
+  display:flex;align-items:center;gap:7px;
+  font-size:12.5px;font-weight:600;color:var(--mut);
+  padding-bottom:9px;margin-bottom:10px;
+  border-bottom:1px solid var(--hairline);
+}
+.wing-cap .ic{width:15px;height:15px;color:var(--honey-hi)}
+/* mini persian calendar */
+.cal-head{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-bottom:8px}
+.cal-month{font-size:14.5px;font-weight:700;color:var(--txt)}
+.cal-year{font-size:11.5px;color:var(--dim);font-family:var(--mono);direction:ltr}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;direction:rtl}
+.cal-dow{
+  text-align:center;font-size:10px;color:var(--dim);font-weight:500;
+  padding:3px 0 5px;
+}
+.cal-day{
+  position:relative;display:grid;place-content:center;
+  aspect-ratio:1;font-size:11.5px;color:var(--body-txt);
+  border-radius:8px;font-variant-numeric:tabular-nums;
+}
+.cal-day.other{opacity:.28}
+.cal-day.today{
+  color:#1D2117;font-weight:700;
+  background:linear-gradient(135deg,var(--honey-hi),var(--honey));
+  box-shadow:0 6px 16px -8px rgba(153,102,15,.7);
+}
+.cal-day .cal-dot{
+  position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--coral);
+}
+.cal-day.today .cal-dot{background:#1D2117}
+.cal-foot{
+  margin-top:9px;padding-top:8px;border-top:1px dashed var(--hairline);
+  font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;justify-content:center;
+}
+.cal-foot .ic{width:13px;height:13px;color:var(--forest-hi)}
+/* occasions of the day */
+.occ-list{display:flex;flex-direction:column;gap:8px}
+.occ-item{
+  display:flex;align-items:flex-start;gap:9px;
+  padding:9px 11px;border-radius:11px;
+  background:var(--panel-2);border:1px solid var(--hairline);
+  font-size:12.5px;color:var(--body-txt);line-height:1.8;
+}
+.occ-item .oc-ic{
+  flex:0 0 auto;width:26px;height:26px;border-radius:9px;
+  display:grid;place-content:center;font-size:13px;
+  background:var(--honey-soft);color:var(--honey-hi);
+}
+.occ-item.holiday{border-color:rgba(247,144,130,.45);background:linear-gradient(120deg,var(--coral-soft),transparent 70%),var(--panel-2)}
+.occ-item.holiday .oc-ic{background:var(--coral-soft);color:var(--coral)}
+.occ-item b{font-weight:600;color:var(--txt)}
+.occ-item .oc-sub{display:block;font-size:10.5px;color:var(--dim);margin-top:1px}
+.occ-empty{color:var(--dim);font-size:12px;text-align:center;padding:10px 4px;line-height:2}
+@media (max-width:760px){
+  .clock-wings{grid-template-columns:1fr 1fr;gap:10px}
+  .wing{padding:11px 12px}
+  .cal-day{font-size:11px}
+}
+@media (max-width:430px){
+  .clock-wings{grid-template-columns:1fr}
+}
+
 /* sub links */
 .sub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+/* v1.2 — big expandable per-subscriber rows (subscription links accordion) */
+.sub-acc{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.acc-item{
+  border:1px solid var(--hairline);border-radius:var(--radius-sm);
+  background:var(--panel-2);
+  overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease;
+}
+.acc-item:hover{border-color:var(--line)}
+.acc-item.open{border-color:rgba(217,160,58,.45);box-shadow:0 14px 30px -18px rgba(153,102,15,.45)}
+.acc-head{
+  width:100%;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:12px;
+  padding:13px 15px;border:none;background:transparent;
+  font-family:var(--fa);text-align:start;
+}
+.acc-ava{
+  width:40px;height:40px;border-radius:13px;flex:0 0 auto;
+  display:grid;place-content:center;
+  font-size:16px;font-weight:700;color:#1D2117;
+  background:linear-gradient(135deg,var(--honey-hi),var(--honey));
+}
+.acc-item.paused .acc-ava{background:linear-gradient(135deg,var(--coral),#e0705f)}
+.acc-item.off .acc-ava{background:linear-gradient(135deg,#9b968a,#7c776c)}
+.acc-mid{flex:1 1 auto;min-width:0}
+.acc-name{font-size:14.5px;font-weight:700;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--mut);margin-top:2px}
+.acc-chev{
+  flex:0 0 auto;width:30px;height:30px;border-radius:10px;
+  display:grid;place-content:center;color:var(--dim);
+  border:1px solid var(--hairline);
+  transition:transform .25s ease,color .2s ease,border-color .2s ease;
+}
+.acc-item.open .acc-chev{transform:rotate(180deg);color:var(--honey-hi);border-color:rgba(217,160,58,.4)}
+.acc-chev .ic{width:15px;height:15px}
+.acc-body{
+  display:grid;grid-template-rows:0fr;
+  transition:grid-template-rows .3s cubic-bezier(.4,.9,.3,1);
+}
+.acc-item.open .acc-body{grid-template-rows:1fr}
+.acc-body-in{overflow:hidden;min-height:0}
+.acc-pad{padding:4px 15px 15px;border-top:1px dashed var(--hairline);margin-top:2px}
+.acc-pad .sub-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.acc-meta .ltr{direction:ltr;unicode-bidi:isolate}
+.acc-quick{
+  display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;
+}
 .link-tile{
   cursor:pointer;user-select:none;text-align:center;
   display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -911,3 +1086,97 @@ details.soft .disc-body{padding:4px 0 12px}
 
 /* footer notice (prohibition) */
 .foot .no-resale{font-family:var(--disp);font-size:10px;letter-spacing:.12em;color:var(--dim);direction:ltr}
+
+/* ═══════════════ v1.2: IP PIN & TEST (ثبت آی‌پی) ═══════════════ */
+.ipgrid{display:grid;grid-template-columns:1fr;gap:12px}
+.ipin-row{display:flex;gap:8px;flex-wrap:wrap}
+.ipin-row .field{flex:1 1 200px;direction:ltr;text-align:left;font-family:var(--mono);font-size:12.5px}
+.ipin-row .btn{flex:0 0 auto}
+.ip-result{
+  border:1px solid var(--hairline);border-radius:var(--radius-sm);
+  background:var(--panel-2);padding:12px 14px;
+  display:flex;flex-direction:column;gap:9px;min-width:0;
+}
+.ip-res-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--body-txt)}
+.ip-res-row .lbl{color:var(--mut);font-size:12px;min-width:64px}
+.ip-flag{font-size:21px;line-height:1}
+.ip-res-row b{font-weight:600;color:var(--txt)}
+.ip-res-row .mono{direction:ltr}
+.ip-ping{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:600;
+  background:var(--forest-soft);color:var(--forest-hi);border:1px solid rgba(111,154,109,.35);
+}
+.ip-ping.mid{background:var(--honey-soft);color:var(--honey-hi);border-color:rgba(217,160,58,.4)}
+.ip-ping.bad{background:var(--coral-soft);color:var(--coral);border-color:rgba(247,144,130,.4)}
+.ip-ping .ic{width:14px;height:14px}
+.ip-test-skel{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12.5px}
+.ip-test-skel .spin{
+  width:15px;height:15px;border-radius:50%;
+  border:2px solid var(--hairline);border-top-color:var(--honey-hi);
+  animation:sulfur-spin 0.8s linear infinite;
+}
+@keyframes sulfur-spin{to{transform:rotate(360deg)}}
+.ip-note{font-size:11px;color:var(--dim);line-height:1.9;margin:0}
+.ip-pin-state{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 13px;border-radius:var(--radius-sm);
+  background:linear-gradient(120deg,var(--honey-soft),transparent 65%),var(--panel-2);
+  border:1px solid rgba(217,160,58,.35);font-size:12.5px;color:var(--body-txt);
+}
+.ip-pin-state .mono{direction:ltr;font-size:12px}
+.ip-pin-state .badge{margin-inline-start:auto}
+@media (max-width:560px){
+  .ipin-row .field{flex:1 1 100%}
+  .ipin-row .btn{flex:1 1 auto}
+}
+
+/* ═══════════════ v1.2: BOT SETUP CARD (ست کردن بات) ═══════════════ */
+.bot-switch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.bot-pill{
+  flex:1 1 140px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 14px;border-radius:12px;
+  background:var(--panel);border:1px solid var(--hairline);
+  color:var(--mut);font-family:var(--fa);font-size:13px;font-weight:500;
+  transition:all .2s ease;
+}
+.bot-pill .ic{width:16px;height:16px}
+.bot-pill:hover{border-color:var(--line);color:var(--txt)}
+.bot-pill.active{
+  color:#1D2117;background:linear-gradient(135deg,var(--honey-hi),var(--honey));
+  border-color:transparent;box-shadow:0 10px 24px -10px rgba(153,102,15,.55);
+}
+.bot-pane{margin-top:4px}
+.bot-status{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin-top:12px;padding:10px 13px;border-radius:var(--radius-sm);
+  background:var(--panel-2);border:1px solid var(--hairline);
+  font-size:12px;color:var(--mut);
+}
+.bot-status .dot-live{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:0 0 auto}
+.bot-status.on .dot-live{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.bot-status.err .dot-live{background:var(--err);box-shadow:0 0 8px var(--err)}
+.bot-status b{color:var(--txt);font-weight:600}
+.bot-status .mono{direction:ltr}
+.bot-hint{font-size:11px;color:var(--dim);line-height:1.9;margin:8px 0 0}
+.bot-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* ═══════════════ v1.2: QUICK QR MODAL (subscribers tab) ═══════════════ */
+.qr-modal-body{display:flex;flex-direction:column;align-items:center;gap:12px}
+.qr-modal-title{font-size:14.5px;font-weight:700;color:var(--txt)}
+.qr-modal-sub{font-size:11.5px;color:var(--dim);word-break:break-all;direction:ltr;text-align:center;max-width:100%}
+
+/* ═══════════════ v1.2: misc responsive polish ═══════════════ */
+@media (max-width:560px){
+  .node-acts{width:100%;justify-content:flex-end}
+  .node-acts .btn{flex:1 1 auto}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .specs th{width:38%}
+  .chart-wrap #telemetry-canvas{height:170px}
+  .actions .btn{min-width:0}
+  .tg-grid{grid-template-columns:1fr}
+  .ucard .uacts{width:100%}
+  .ucard .uacts .btn{flex:1 1 auto}
+  .foot{gap:6px 10px;font-size:10.5px}
+}

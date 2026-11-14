@@ -17,7 +17,7 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'Aral Sulfur';
-export const PANEL_VERSION = '1.1.1';
+export const PANEL_VERSION = '1.2.0';
 /** Official repository — data pools (data/ folder) AND panel self-update both resolve here. */
 export const GITHUB_REPO = 'Aral-Dev/Aral-Sulfur';
 export const GITHUB_REPO_URL = 'https://github.com/Aral-Dev/Aral-Sulfur';
@@ -121,6 +121,19 @@ export const DEFAULT_SETTINGS = {
   tgBotHookSecret: '',
   // Non-secret bot metadata for the panel UI: { botId, username, firstName, webhookSetAt, lastOkAt, lastError }
   tgBotInfo: null,
+
+  /* ── v1.2: Bale messenger bot (Telegram-compatible API on tapi.bale.ai) ── */
+  blBotToken: '',
+  blBotAdminIds: '',
+  blBotHookSecret: '',
+  blBotInfo: null,
+
+  /* ── v1.2: panel-wide pinned IP — when set, every generated config connects
+     through exactly this address (per-user static lists still win for that user). 
+     Format mirrors clean-IP entries: "host" or "host#Remark". ── */
+  pinnedIP: '',
+  // Last test result shown in the panel: { cc, country, region, city, isp, asn, ping, testedAt }
+  pinnedIPMeta: null,
 };
 
 export const POOL_KEYS = {
@@ -343,7 +356,10 @@ export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
   if (typeof safePatch.tgBotToken === 'string') {
     const tok = safePatch.tgBotToken.trim();
     // Telegram bot tokens look like "<bot_id>:<35 secret chars>"; letters, digits, _ and -
-    next.tgBotToken = /^\d{6,12}:[A-Za-z0-9_-]{30,60}$/.test(tok) ? tok : '';
+    // Masked echoes from the UI (••••) are ignored so a full-settings save never wipes the bot.
+    if (tok && !tok.includes('•')) {
+      next.tgBotToken = /^\d{6,12}:[A-Za-z0-9_-]{30,60}$/.test(tok) ? tok : '';
+    }
   }
   if (typeof safePatch.tgBotAdminIds === 'string') {
     const ids = safePatch.tgBotAdminIds
@@ -369,6 +385,62 @@ export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
           webhookSetAt: Math.max(0, Number(info.webhookSetAt) || 0),
           lastOkAt: Math.max(0, Number(info.lastOkAt) || 0),
           lastError: String(info.lastError || '').slice(0, 160),
+        }
+      : null;
+  }
+
+  /* ── v1.2: Bale bot settings (same shape as Telegram) ── */
+  if (typeof safePatch.blBotToken === 'string') {
+    const tok = safePatch.blBotToken.trim();
+    if (tok && !tok.includes('•')) {
+      next.blBotToken = /^\d{6,12}:[A-Za-z0-9_-]{20,60}$/.test(tok) ? tok : '';
+    }
+  }
+  if (typeof safePatch.blBotAdminIds === 'string') {
+    const ids = safePatch.blBotAdminIds
+      .split(/[\s,;]+/)
+      .map((s) => s.trim().replace(/^@/, ''))
+      .filter((s) => /^-?\d{3,20}$/.test(s));
+    next.blBotAdminIds = [...new Set(ids)].slice(0, 12).join(',');
+  }
+  if (typeof safePatch.blBotHookSecret === 'string' && /^[0-9a-f]{32}$/.test(safePatch.blBotHookSecret.trim())) {
+    next.blBotHookSecret = safePatch.blBotHookSecret.trim();
+  }
+  if (!next.blBotHookSecret) {
+    next.blBotHookSecret = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+  }
+  if (safePatch.blBotInfo !== undefined) {
+    const info = safePatch.blBotInfo && typeof safePatch.blBotInfo === 'object' ? safePatch.blBotInfo : null;
+    next.blBotInfo = info
+      ? {
+          botId: String(info.botId || '').slice(0, 20),
+          username: String(info.username || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 64),
+          firstName: String(info.firstName || '').slice(0, 64),
+          canJoinGroups: Boolean(info.canJoinGroups),
+          webhookSetAt: Math.max(0, Number(info.webhookSetAt) || 0),
+          lastOkAt: Math.max(0, Number(info.lastOkAt) || 0),
+          lastError: String(info.lastError || '').slice(0, 160),
+        }
+      : null;
+  }
+
+  /* ── v1.2: panel-wide pinned IP ── */
+  if (typeof safePatch.pinnedIP === 'string') {
+    const raw = safePatch.pinnedIP.trim().slice(0, 200);
+    next.pinnedIP = raw;
+  }
+  if (safePatch.pinnedIPMeta !== undefined) {
+    const m = safePatch.pinnedIPMeta && typeof safePatch.pinnedIPMeta === 'object' ? safePatch.pinnedIPMeta : null;
+    next.pinnedIPMeta = m
+      ? {
+          cc: String(m.cc || '').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase(),
+          country: String(m.country || '').slice(0, 60),
+          region: String(m.region || '').slice(0, 60),
+          city: String(m.city || '').slice(0, 60),
+          isp: String(m.isp || m.org || '').slice(0, 80),
+          asn: String(m.asn || '').slice(0, 12),
+          ping: Math.max(0, Number(m.ping) || 0),
+          testedAt: Math.max(0, Number(m.testedAt) || 0),
         }
       : null;
   }

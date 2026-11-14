@@ -71,7 +71,9 @@ export function buildWsPath(settings) {
 export async function hydrateUserAddresses(env, userView, settings) {
   if (!userView) return userView;
   const explicit = Array.isArray(userView.ips) && userView.ips.length > 0;
-  if (!userView.autoRotateIps || explicit) return userView;
+  /* v1.2: a panel-wide pin (or an explicit per-user list) freezes rotation */
+  const pinned = effectivePinnedIP(userView, settings);
+  if (pinned || !userView.autoRotateIps || explicit) return userView;
   try {
     const { list } = await rotateCleanAddresses(env, userView, settings);
     if (list && list.length) {
@@ -79,6 +81,14 @@ export async function hydrateUserAddresses(env, userView, settings) {
     }
   } catch {}
   return userView;
+}
+
+/* v1.2: resolve the effective pinned address for a user (per-user static list wins,
+   then the panel-wide pin). Returns the raw "host#Remark" entry or ''. */
+export function effectivePinnedIP(userView, settings) {
+  if (Array.isArray(userView?.ips) && userView.ips.length > 0) return String(userView.ips[0]);
+  const global = String(settings?.pinnedIP || '').trim();
+  return global;
 }
 
 /* ULTRA: effective protocol flags for a user view */
@@ -152,6 +162,32 @@ export function computeQuickUserNodeMeta(user, settings, requestHost) {
   const firstPort = allTlsPorts[0] || 443;
   const protoFlags = userProtocolFlags(user, settings);
   const dpi = userDpiParams(user, settings);
+
+  /* v1.2: PIN MODE — count & primary URIs revolve around the pinned address alone */
+  const pinnedQuick = effectivePinnedIP(user, settings);
+  if (pinnedQuick) {
+    const parsedPin = parseCleanEntry(pinnedQuick);
+    if (parsedPin) {
+      const pinPort = parsedPin.portOverride || firstPort;
+      const pinAddr = formatHostForUri(parsedPin.address);
+      const encPathP = encodeURIComponent(wsPath);
+      const fpP = encodeURIComponent(dpi.fingerprint);
+      const alpnP = encodeURIComponent(settings.alpn || 'http/1.1');
+      const pinSlots = parsedPin.portOverride ? 1 : allTlsPorts.length;
+      const pinHttpSlots = (httpPortsOn && !parsedPin.portOverride) ? allHttpPorts.length : 0;
+      const vNameP = `${PANEL_BRAND} | VLESS`;
+      const tNameP = `${PANEL_BRAND} | Trojan`;
+      return {
+        nodeCount: Math.min(200, (protoFlags.vless ? pinSlots + pinHttpSlots : 0) + (protoFlags.trojan ? pinSlots : 0) + (protoFlags.ss ? pinSlots : 0)),
+        primaryVless: protoFlags.vless
+          ? `vless://${user.uuid}@${pinAddr}:${pinPort}?encryption=none&security=tls&sni=${hostOnly}&fp=${fpP}&alpn=${alpnP}&type=ws&host=${hostOnly}&path=${encPathP}#${encodeURIComponent(vNameP)}`
+          : '',
+        primaryTrojan: protoFlags.trojan
+          ? `trojan://${encodeURIComponent(user.trojanPassword)}@${pinAddr}:${pinPort}?security=tls&sni=${hostOnly}&fp=${fpP}&alpn=${alpnP}&type=ws&host=${hostOnly}&path=${encPathP}#${encodeURIComponent(tNameP)}`
+          : '',
+      };
+    }
+  }
 
   let tlsPortSlots = allTlsPorts.length;
   let httpEndpointCount = 1;
@@ -305,15 +341,17 @@ export function buildNodeDescriptors(user, settings, requestHost) {
     }
   }
 
-  const nodes = [];
-  let idx = 1;
+  /* v1.2: expand targets into final node objects (shared by normal & pin mode) */
+  const emitNodes = (targetList) => {
+    const nodes = [];
+    let idx = 1;
 
-  outer: for (const loc of locations) {
-    const locWsPath = `${cleanWsPath}${locSuffix(loc.index)}`;
-    const fullWsPath = `${locWsPath}${wsPath.includes('?') ? wsPath.slice(wsPath.indexOf('?')) : ''}`;
-    const locFlag = flagLabel(loc.country);
+    outer: for (const loc of locations) {
+      const locWsPath = `${cleanWsPath}${locSuffix(loc.index)}`;
+      const fullWsPath = `${locWsPath}${wsPath.includes('?') ? wsPath.slice(wsPath.indexOf('?')) : ''}`;
+      const locFlag = flagLabel(loc.country);
 
-    for (const t of targets) {
+      for (const t of targetList) {
       for (const port of t.ports) {
         // Uniform watermark remark: brand + protocol (+ location flag when set)
         if (protoFlags.vless) {
@@ -402,9 +440,42 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         if (nodes.length >= 200) break outer;
       }
     }
+    }
+    return nodes;
+  };
+
+  /* v1.2: PIN MODE — when a pin is active (per-user static entry or panel-wide pin)
+     the config list is rebuilt around exactly that address: the pinned target becomes
+     the primary node on every selected TLS port (SNI/Host stay on the worker domain so
+     routing keeps working), and the domain/custom-domain targets are replaced. */
+  const pinnedEntry = effectivePinnedIP(user, settings);
+  if (pinnedEntry) {
+    const parsedPin = parseCleanEntry(pinnedEntry);
+    if (parsedPin) {
+      const pinLabel = `PIN${parsedPin.remark && parsedPin.remark !== parsedPin.address ? ' ' + parsedPin.remark : ''}`;
+      const pinTargets = [{
+        address: parsedPin.address,
+        sni: hostOnly,
+        hostHeader: hostOnly,
+        tagLabel: pinLabel,
+        ports: parsedPin.portOverride ? [parsedPin.portOverride] : allTlsPorts,
+        tls: true,
+      }];
+      if ((settings.enableHttpPorts || userHttpOn) && allHttpPorts.length && !parsedPin.portOverride) {
+        pinTargets.push({
+          address: parsedPin.address,
+          sni: '',
+          hostHeader: hostOnly,
+          tagLabel: pinLabel + ' (HTTP)',
+          ports: allHttpPorts,
+          tls: false,
+        });
+      }
+      return emitNodes(pinTargets);
+    }
   }
 
-  return nodes;
+  return emitNodes(targets);
 }
 
 function formatHostForUri(addr) {

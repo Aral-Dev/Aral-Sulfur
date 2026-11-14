@@ -55,7 +55,20 @@ import {
   serveSubscription,
 } from './sub.js';
 import { clearPool, getPool, invalidatePoolCache, parseListText, provisionPoolsFromRepo, sampleFrom, savePool, setActiveDataRepo } from './pools.js';
-import { handleTgBotUpdate, setTgApiBase, tgBotConnect, tgBotDisconnect, tgBotPublicInfo, tgBotStatus } from './tgbot.js';
+import {
+  blBotConnect,
+  blBotDisconnect,
+  blBotPublicInfo,
+  blBotStatus,
+  handleBaleBotUpdate,
+  handleTgBotUpdate,
+  setBaleApiBase,
+  setTgApiBase,
+  tgBotConnect,
+  tgBotDisconnect,
+  tgBotPublicInfo,
+  tgBotStatus,
+} from './tgbot.js';
 import { getInlineAssets, getPanelHtml } from './generated/ui.js';
 import { BRAND_FILES } from './generated/brand.js';
 
@@ -296,20 +309,6 @@ export default {
         });
       }
 
-      // 0b) PWA app manifest + service worker (installable panel)
-      if (upgradeHeader !== 'websocket' && path === '/manifest.webmanifest') {
-        return new Response(PWA_MANIFEST(request), {
-          status: 200,
-          headers: { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': 'public, max-age=3600' },
-        });
-      }
-      if (upgradeHeader !== 'websocket' && path === '/sw.js') {
-        return new Response(PWA_SERVICE_WORKER, {
-          status: 200,
-          headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=3600' },
-        });
-      }
-
       const runtime = await loadRuntimeState(env);
 
       // Publish the configured data repo for the pools layer so
@@ -318,6 +317,7 @@ export default {
 
       // Optional Telegram API base override (E2E test harness only)
       try { if (env?.NL_TG_API_BASE) setTgApiBase(env.NL_TG_API_BASE); } catch {}
+      try { if (env?.NL_BALE_API_BASE) setBaleApiBase(env.NL_BALE_API_BASE); } catch {}
 
       // One-time background provisioning of data pools + default clean IPs
       // from the configured repo (Aral-Dev/Aral-Sulfur data/ folder). Cheap KV-flag check,
@@ -740,6 +740,13 @@ async function handleApi(request, url, env, runtime, ctx = {}) {
   }
   if (path.startsWith('/api/tgbot/hook/') && method === 'GET') {
     return json({ ok: false, error: 'این مسیر فقط برای وبهوک تلگرام است (POST).' }, 405);
+  }
+  // v1.2: Bale messenger bot webhook (path-secret protected; Bale sends no secret header)
+  if (path.startsWith('/api/blbot/hook/') && method === 'POST') {
+    return await handleBaleBotUpdate(request, url, env, runtime, { persistState: saveRuntimeState });
+  }
+  if (path.startsWith('/api/blbot/hook/') && method === 'GET') {
+    return json({ ok: false, error: 'این مسیر فقط برای وبهوک بله است (POST).' }, 405);
   }
 
   // =========================================================================
@@ -1248,6 +1255,36 @@ async function handleApi(request, url, env, runtime, ctx = {}) {
     return json({ ok: true, ...result, payload: await buildFullAdminPayload(saved, url.host, cfInfo) });
   }
 
+  if (path === '/api/blbot/save' && method === 'POST') {
+    const body = await readJsonBody(request);
+    if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
+    const token = String(body.token || '').trim();
+    const adminIds = String(body.adminIds || '').trim();
+    if (!token && !state.settings.blBotToken) {
+      return json({ ok: false, error: 'توکن بات بله را از @BotFather بله وارد کنید.' }, 400);
+    }
+    if (!adminIds && !state.settings.blBotAdminIds) {
+      return json({ ok: false, error: 'آیدی عددی ادمین بات بله لازم است.' }, 400);
+    }
+    const effectiveToken = token || state.settings.blBotToken;
+    const effectiveAdmins = adminIds || state.settings.blBotAdminIds;
+
+    const result = await blBotConnect(env, state, {
+      token: effectiveToken,
+      adminIds: effectiveAdmins,
+      host: url.host,
+      persistState: saveRuntimeState,
+    });
+    if (!result.ok) {
+      appendLog(state, 'blbot', `اتصال بات بله ناموفق: ${result.error}`);
+      try { await saveRuntimeState(env, state); } catch {}
+      return json({ ok: false, error: result.error }, 400);
+    }
+    appendLog(state, 'blbot', `بات بله @${result.bot.username} متصل و وبهوک ست شد`);
+    const saved = await saveRuntimeState(env, state);
+    return json({ ok: true, ...result, payload: await buildFullAdminPayload(saved, url.host, cfInfo) });
+  }
+
   if (path === '/api/tgbot/disconnect' && method === 'POST') {
     const result = await tgBotDisconnect(env, state, { persistState: saveRuntimeState });
     appendLog(state, 'tgbot', 'بات تلگرام قطع و وبهوک حذف شد');
@@ -1255,8 +1292,20 @@ async function handleApi(request, url, env, runtime, ctx = {}) {
     return json({ ok: true, ...result, payload: await buildFullAdminPayload(saved, url.host, cfInfo) });
   }
 
+  if (path === '/api/blbot/disconnect' && method === 'POST') {
+    const result = await blBotDisconnect(env, state, { persistState: saveRuntimeState });
+    appendLog(state, 'blbot', 'بات بله قطع و وبهوک حذف شد');
+    const saved = await saveRuntimeState(env, state);
+    return json({ ok: true, ...result, payload: await buildFullAdminPayload(saved, url.host, cfInfo) });
+  }
+
   if (path === '/api/tgbot/status' && method === 'GET') {
     const status = await tgBotStatus(state);
+    return json(status);
+  }
+
+  if (path === '/api/blbot/status' && method === 'GET') {
+    const status = await blBotStatus(state);
     return json(status);
   }
 
@@ -1648,10 +1697,15 @@ async function buildFullAdminPayload(state, host, cf = null) {
 
   // ULTRA v4.2: never ship the raw bot token to the UI — masked form only
   // (the stored value in KV is untouched; re-connecting needs a fresh paste).
-  const rawToken = String(state.settings.tgBotToken || '');
-  const publicSettings = rawToken
-    ? { ...state.settings, tgBotToken: rawToken.slice(0, 8) + '••••••••' + rawToken.slice(-4) }
-    : state.settings;
+  const maskToken = (tok) => {
+    const t = String(tok || '');
+    return t && !t.includes('•') ? t.slice(0, 8) + '••••••••' + t.slice(-4) : t;
+  };
+  const publicSettings = {
+    ...state.settings,
+    tgBotToken: maskToken(state.settings.tgBotToken),
+    blBotToken: maskToken(state.settings.blBotToken),
+  };
 
   return {
     ok: true,
@@ -1667,6 +1721,7 @@ async function buildFullAdminPayload(state, host, cf = null) {
     settings: publicSettings,
     cfIntegration: sanitizeCfPublicInfo(state.cfApi, host),
     tgBot: tgBotPublicInfo(state.settings),
+    blBot: blBotPublicInfo(state.settings),
     updater: {
       repo: GITHUB_REPO,
       repoUrl: GITHUB_REPO_URL,

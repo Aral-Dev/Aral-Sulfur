@@ -208,8 +208,8 @@ try {
 
   // 4) Subscriber Press Pass (/sub/<token>)
   await safeClick(page, '.tab-btn[data-tab="home"]');
-  const subHref = await page.getAttribute('#open-pass', 'href');
-  const subToken = subHref.split('/sub/')[1];
+  const subHref = await page.getAttribute('#sub-acc .acc-quick a', 'href');
+  const subToken = subHref.split('/status/')[1] || subHref.split('/sub/')[1];
 
   const subPage = await context.newPage();
   await subPage.goto(`${BASE}/sub/${subToken}`, { waitUntil: 'networkidle' });
